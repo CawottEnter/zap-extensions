@@ -55,6 +55,7 @@ var addOns = listOf(
     "pscanrulesAlpha",
     "pscanrulesBeta",
     "quickstart",
+    "recordsattack",
     "regextester",
     "replacer",
     "requester",
