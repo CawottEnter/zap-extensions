@@ -19,9 +19,40 @@
  */
 package org.zaproxy.zap.extension.recordsattack;
 
-public class RecordsAttackDialog {
+import java.awt.Dimension;
+import java.awt.Frame;
+import org.parosproxy.paros.control.Control;
+import org.zaproxy.zap.extension.users.ExtensionUserManagement;
+import org.zaproxy.zap.view.StandardFieldsDialog;
 
-    RecordsAttackDialog() {
-        super();
+public class RecordsAttackDialog extends StandardFieldsDialog {
+    protected static final String[] LABELS = {
+        "spiderajax.scandialog.tab.scope", "spiderajax.scandialog.tab.options",
+        /*"spiderajax.scandialog.tab.elements"*/ };
+    /** */
+    private static final long serialVersionUID = 1L;
+
+    private ExtensionRecordsAttack extension = null;
+    private final ExtensionUserManagement extUserMgmt;
+
+    RecordsAttackDialog(ExtensionRecordsAttack extension, Frame owner, Dimension dim) {
+        super(owner, "spiderajax.scandialog.title", dim, LABELS);
+        this.extension = extension;
+
+        this.extUserMgmt =
+                Control.getSingleton()
+                        .getExtensionLoader()
+                        .getExtension(ExtensionUserManagement.class);
+    }
+
+    @Override
+    public void save() {
+        this.extension.startRecord();
+    }
+
+    @Override
+    public String validateFields() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

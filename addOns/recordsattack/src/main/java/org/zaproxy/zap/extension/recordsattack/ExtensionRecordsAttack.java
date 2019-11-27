@@ -19,11 +19,15 @@
  */
 package org.zaproxy.zap.extension.recordsattack;
 
+import java.awt.Toolkit;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javax.swing.KeyStroke;
 import org.apache.log4j.Logger;
-import org.parosproxy.paros.core.proxy.ProxyListener;
+import org.parosproxy.paros.control.Control;
+import org.parosproxy.paros.control.Control.Mode;
 import org.parosproxy.paros.extension.Extension;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
@@ -32,13 +36,15 @@ import org.parosproxy.paros.model.SiteNode;
 import org.parosproxy.paros.view.View;
 import org.zaproxy.zap.extension.selenium.ExtensionSelenium;
 import org.zaproxy.zap.utils.DisplayUtils;
+import org.zaproxy.zap.view.ZapMenuItem;
 
 public class ExtensionRecordsAttack extends ExtensionAdaptor {
 
     private static final Logger logger = Logger.getLogger(ExtensionRecordsAttack.class);
     public static final int PROXY_LISTENER_ORDER = ProxyListenerLog.PROXY_LISTENER_ORDER + 1;
     public static final String NAME = "ExtensionRecordsAttack";
-    private ProxyRecordsListener proxyListener;
+    private SpiderListener spiderListener;
+    private boolean recordsRunning;
 
     private static final List<Class<? extends Extension>> DEPENDENCIES;
 
@@ -51,6 +57,8 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
 
     private RecordsPanel recordsPanel = null;
     private RecordsRequestDialog recordsDialog = null;
+    private RecordsAttackAPI recordsAttackApi;
+    private ZapMenuItem menuItemCustomScan;
 
     /**
      * initializes the extension
@@ -59,13 +67,14 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
      */
     public ExtensionRecordsAttack() throws ClassNotFoundException {
         super(NAME);
-        this.setI18nPrefix("recordsAttack");
+        this.setI18nPrefix("recordsattack");
         this.setOrder(234);
     }
 
     @Override
     public void init() {
         super.init();
+        recordsAttackApi = new RecordsAttackAPI(this);
     }
 
     @Override
@@ -81,11 +90,41 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
      */
     @Override
     public void hook(ExtensionHook extensionHook) {
+        logger.info("Extension Records hooking");
         super.hook(extensionHook);
+        extensionHook.addApiImplementor(recordsAttackApi);
+
         if (getView() != null) {
             extensionHook.getHookView().addStatusPanel(getRecordsPanel());
-            extensionHook.addProxyListener(getProxyListener());
+            extensionHook.getHookMenu().addToolsMenuItem(getMenuItemCustomScan());
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    private ZapMenuItem getMenuItemCustomScan() {
+        if (menuItemCustomScan == null) {
+            menuItemCustomScan =
+                    new ZapMenuItem(
+                            "recordsattack.menu.tools.label",
+                            KeyStroke.getKeyStroke(
+                                    KeyEvent.VK_X,
+                                    // TODO Use getMenuShortcutKeyMaskEx() (and remove warn
+                                    // suppression) when targeting Java 10+
+                                    Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()
+                                            | KeyEvent.ALT_DOWN_MASK,
+                                    false));
+            menuItemCustomScan.setEnabled(Control.getSingleton().getMode() != Mode.safe);
+
+            menuItemCustomScan.addActionListener(
+                    new java.awt.event.ActionListener() {
+
+                        @Override
+                        public void actionPerformed(java.awt.event.ActionEvent e) {
+                            showScanDialog(null);
+                        }
+                    });
+        }
+        return menuItemCustomScan;
     }
 
     @Override
@@ -101,7 +140,7 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     protected RecordsPanel getRecordsPanel() {
         if (recordsPanel == null) {
             recordsPanel = new RecordsPanel(this);
-            recordsPanel.setName(this.getMessages().getString("requestRecords.panel.title"));
+            recordsPanel.setName(this.getMessages().getString("recordsattack.panel.title"));
         }
         return recordsPanel;
     }
@@ -118,15 +157,44 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
         recordsDialog.setVisible(true);
     }
 
-    public ProxyListener getProxyListener() {
-        if (proxyListener == null) {
-            proxyListener = new ProxyRecordsListener();
-        }
-        return proxyListener;
+    RecordThread createSpiderThread(SpiderListener listener) {
+        RecordThread recordThread = new RecordThread(this, listener);
+        return recordThread;
     }
-    
 
-    public void setProxyListener(ProxyRecordsListener proxyListener) {
-        this.proxyListener = proxyListener;
+    public boolean isRecordRunning() {
+        return recordsRunning;
+    }
+
+    private void setRecordRunning(boolean running) {
+        recordsRunning = running;
+    }
+
+    /**
+     * Starts a new spider scan, with the given display name and using the given target.
+     *
+     * <p><strong>Note:</strong> The preferred method to start the scan is with {@link
+     * #startScan(AjaxSpiderTarget)}, unless a custom display name is really needed.
+     *
+     * @param displayName the name of the scan (to be displayed in UI)
+     * @param listener a listener that will be notified of the scan progress
+     * @throws IllegalStateException if the target is not allowed in the current {@link
+     *     org.parosproxy.paros.control.Control.Mode mode}.
+     */
+    @SuppressWarnings("fallthrough")
+    public void startRecord(String displayName, SpiderListener listener) {
+        if (getView() != null) {
+            switch (Control.getSingleton().getMode()) {
+                case safe:
+                case protect:
+                case standard:
+                case attack:
+                default:
+                    // No problem
+                    break;
+            }
+
+            getRecordsPanel().startRecord(displayName, listener);
+        }
     }
 }

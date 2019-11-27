@@ -35,9 +35,9 @@ public class RecordsRequestDialog extends StandardFieldsDialog {
         "spiderajax.scandialog.tab.scope",
         /*"spiderajax.scandialog.tab.elements"*/ };
 
-    private static final String FIELD_SCENARIO = "requestRecords.scandialog.label.scenario";
+    private static final String FIELD_SCENARIO = "recordsattack.scandialog.label.scenario";
     private static final String FIELD_AUTHENTIFICATION =
-            "requestRecords.scandialog.label.authentification";
+            "recordsattack.scandialog.label.authentification";
     private static final String FIELD_USER = "spiderajax.scandialog.label.user";
     private static final String FIELD_IN_SCOPE = "spiderajax.scandialog.label.inscope";
     private static final String FIELD_SUBTREE_ONLY =

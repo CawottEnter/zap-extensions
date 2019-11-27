@@ -21,17 +21,29 @@ package org.zaproxy.zap.extension.recordsattack;
 
 import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.KeyStroke;
 import org.apache.log4j.Logger;
+import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.control.Control;
 import org.parosproxy.paros.control.Control.Mode;
 import org.parosproxy.paros.extension.AbstractPanel;
+import org.parosproxy.paros.model.HistoryReference;
 import org.parosproxy.paros.model.Model;
+import org.parosproxy.paros.network.HttpMessage;
+import org.parosproxy.paros.view.View;
+import org.zaproxy.zap.view.ScanStatus;
+import org.zaproxy.zap.view.table.HistoryReferencesTable;
 
-public class RecordsPanel extends AbstractPanel {
+public class RecordsPanel extends AbstractPanel implements SpiderListener {
     private static final long serialVersionUID = 1L;
     private static final Logger logger = Logger.getLogger(RecordsPanel.class);
 
@@ -39,8 +51,24 @@ public class RecordsPanel extends AbstractPanel {
     private ExtensionRecordsAttack extension = null;
     private javax.swing.JPanel recordsAttackPanel = null;
     private javax.swing.JToolBar panelToolbar = null;
+    private JButton optionsButton = null;
+
     private JButton startRecordsButton;
     private JButton stopRecordsButton;
+    private JLabel foundLabel = new JLabel();
+    private ScanStatus scanStatus = null;
+
+    private HistoryReferencesTable spiderResultsTable;
+
+    private RecordsAttackResultsTableModel spiderResultsTableModel =
+            new RecordsAttackResultsTableModel();
+
+    private RecordThread runnable = null;
+    private SortedSet<String> visitedUrls = new TreeSet<>();
+    private int foundCount = 0;
+
+    // private RecordsAttackResultsTableModel spiderResultsTableModel =
+    //         new RecordsAttackResultsTableModel();
 
     /** This is the default constructor */
     public RecordsPanel(ExtensionRecordsAttack e) {
@@ -57,6 +85,28 @@ public class RecordsPanel extends AbstractPanel {
             this.setSize(600, 200);
         }
         this.add(getRecordsAttackPanel(), java.awt.BorderLayout.CENTER);
+        scanStatus =
+                new ScanStatus(
+                        new ImageIcon(
+                                RecordsPanel.class.getResource("/resource/icon/16/spiderAjax.png")),
+                        this.extension.getMessages().getString("recordsattack.panel.title"));
+
+        this.setDefaultAccelerator(
+                KeyStroke.getKeyStroke(
+                        // TODO Use getMenuShortcutKeyMaskEx() (and remove warn suppression) when
+                        // targeting Java 10+
+                        KeyEvent.VK_J,
+                        Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()
+                                | KeyEvent.SHIFT_DOWN_MASK,
+                        false));
+
+        this.setMnemonic(Constant.messages.getChar("spiderajax.panel.mnemonic"));
+        if (View.isInitialised()) {
+            View.getSingleton()
+                    .getMainFrame()
+                    .getMainFooterPanel()
+                    .addFooterToolbarRightLabel(scanStatus.getCountLabel());
+        }
     }
 
     /** @return the AJAX Spider Panel */
@@ -154,6 +204,9 @@ public class RecordsPanel extends AbstractPanel {
 
             panelToolbar.add(getStartRecordsButton(), gridBagConstraints1);
             panelToolbar.add(getStopRecordsButton(), gridBagConstraints2);
+
+            panelToolbar.add(t1, gridBagConstraintsX);
+            panelToolbar.add(getOptionsButton(), gridBagConstraintsy);
         }
         return panelToolbar;
     }
@@ -163,7 +216,7 @@ public class RecordsPanel extends AbstractPanel {
         if (startRecordsButton == null) {
             startRecordsButton = new JButton();
             startRecordsButton.setText(
-                    this.extension.getMessages().getString("requestRecords.toolbar.button.start"));
+                    this.extension.getMessages().getString("recordsattack.toolbar.button.start"));
             startRecordsButton.setEnabled(!Mode.safe.equals(Control.getSingleton().getMode()));
             startRecordsButton.addActionListener(
                     new ActionListener() {
@@ -181,10 +234,46 @@ public class RecordsPanel extends AbstractPanel {
         if (stopRecordsButton == null) {
             stopRecordsButton = new JButton();
             stopRecordsButton.setToolTipText(
-                    this.extension.getMessages().getString("requestRecords.toolbar.button.stop"));
+                    this.extension.getMessages().getString("recordsattack.toolbar.button.stop"));
             stopRecordsButton.setEnabled(false);
+            stopRecordsButton.addActionListener(
+                    new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            stopRecord();
+                        }
+                    });
         }
         return stopRecordsButton;
+    }
+
+    /** @return the Options Button */
+    private JButton getOptionsButton() {
+        if (optionsButton == null) {
+            optionsButton = new JButton();
+            optionsButton.setToolTipText(
+                    this.extension.getMessages().getString("spiderajax.options.title"));
+            optionsButton.setIcon(
+                    new ImageIcon(RecordsPanel.class.getResource("/resource/icon/16/041.png")));
+            optionsButton.addActionListener(
+                    new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            Control.getSingleton()
+                                    .getMenuToolsControl()
+                                    .options(
+                                            extension
+                                                    .getMessages()
+                                                    .getString("spiderajax.options.title"));
+                        }
+                    });
+        }
+        return optionsButton;
+    }
+
+    public void stopRecord() {
+        this.getStartRecordsButton().setEnabled(true);
+        this.getStopRecordsButton().setEnabled(false);
     }
 
     /**
@@ -195,25 +284,84 @@ public class RecordsPanel extends AbstractPanel {
     private javax.swing.JScrollPane getScrollLog() {
         if (scrollLog == null) {
             scrollLog = new javax.swing.JScrollPane();
+            scrollLog.setViewportView(getRecordResultsTable());
 
             scrollLog.setName("scrollLog");
         }
         return scrollLog;
     }
 
-    private void startRecord(String displayName) {
+    private HistoryReferencesTable getRecordResultsTable() {
+        if (spiderResultsTable == null) {
+            spiderResultsTable = new RecordsResultsTable(spiderResultsTableModel);
+        }
+        return spiderResultsTable;
+    }
+
+    public void startRecord(String displayName, SpiderListener listener) {
+
+        if (View.isInitialised()) {
+            // Show the tab in case its been closed
+            this.setTabFocus();
+            this.foundCount = 0;
+            this.foundLabel.setText(Integer.toString(this.foundCount));
+        }
+        this.runnable = extension.createSpiderThread(this);
         this.getStartRecordsButton().setEnabled(false);
         this.getStopRecordsButton().setEnabled(true);
-        /*
-        ProxyListenerLog proxyListener = null;
-        Control control = org.parosproxy.paros.control.Control.getSingleton().getProxy().g;
-        ExtensionHistory extHist = (ExtensionHistory) org.parosproxy.paros.control.Control.getSingleton().
-                getExtensionLoader().getExtension(ExtensionHistory.NAME);
-        if (extHist != null) {
-            // You can now access the history list via:
-            extHist.getHistoryList();
+        spiderResultsTableModel.clear();
+        if (listener != null) {
+            this.runnable.addSpiderListener(listener);
         }
-        */
+        try {
+            new Thread(runnable, "ZAP-RecordsRequest").start();
+        } catch (Exception e) {
+            logger.error(e);
+        }
+    }
 
+    @Override
+    public void spiderStarted() {
+        // TODO Auto-generated method stub
+
+    }
+
+    private void resetPanelState() {}
+
+    /**
+     * @param r history reference
+     * @param msg the http message
+     * @param url the targeted url
+     */
+    private boolean addHistoryUrl(HistoryReference r, HttpMessage msg, ResourceState state) {
+        if (isNewUrl(r, msg)) {
+            this.spiderResultsTableModel.addHistoryReference(r, state);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @param r history reference
+     * @param msg the http message
+     * @return if the url is new or not
+     */
+    private boolean isNewUrl(HistoryReference r, HttpMessage msg) {
+        return !visitedUrls.contains(msg.getRequestHeader().getURI().toString());
+    }
+
+    @Override
+    public void foundMessage(
+            HistoryReference historyReference, HttpMessage httpMessage, ResourceState state) {
+        boolean added = addHistoryUrl(historyReference, httpMessage, state);
+        if (View.isInitialised() && added) {
+            foundCount++;
+            this.foundLabel.setText(Integer.toString(this.foundCount));
+        }
+    }
+
+    @Override
+    public void spiderStopped() {
+        logger.info("Spider spiderStopped");
     }
 }
