@@ -29,7 +29,6 @@ import org.apache.log4j.Logger;
 import org.parosproxy.paros.control.Control;
 import org.parosproxy.paros.control.Control.Mode;
 import org.parosproxy.paros.extension.AbstractPanel;
-import org.parosproxy.paros.extension.history.ExtensionHistory;
 import org.parosproxy.paros.model.Model;
 
 public class RecordsPanel extends AbstractPanel {
@@ -201,20 +200,20 @@ public class RecordsPanel extends AbstractPanel {
         }
         return scrollLog;
     }
-    
-    
+
     private void startRecord(String displayName) {
         this.getStartRecordsButton().setEnabled(false);
         this.getStopRecordsButton().setEnabled(true);
-        ProxyListenerLog proxyListener = null; 
-        Control control = org.parosproxy.paros.control.Control.getSingleton();
-        control.getProxy().
-        ExtensionHistory extHist = org.parosproxy.paros.control.Control.getSingleton().
+        /*
+        ProxyListenerLog proxyListener = null;
+        Control control = org.parosproxy.paros.control.Control.getSingleton().getProxy().g;
+        ExtensionHistory extHist = (ExtensionHistory) org.parosproxy.paros.control.Control.getSingleton().
                 getExtensionLoader().getExtension(ExtensionHistory.NAME);
         if (extHist != null) {
             // You can now access the history list via:
             extHist.getHistoryList();
         }
+        */
 
     }
 }

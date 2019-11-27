@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.log4j.Logger;
+import org.parosproxy.paros.core.proxy.ProxyListener;
 import org.parosproxy.paros.extension.Extension;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
@@ -37,6 +38,7 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     private static final Logger logger = Logger.getLogger(ExtensionRecordsAttack.class);
     public static final int PROXY_LISTENER_ORDER = ProxyListenerLog.PROXY_LISTENER_ORDER + 1;
     public static final String NAME = "ExtensionRecordsAttack";
+    private ProxyRecordsListener proxyListener;
 
     private static final List<Class<? extends Extension>> DEPENDENCIES;
 
@@ -82,6 +84,7 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
         super.hook(extensionHook);
         if (getView() != null) {
             extensionHook.getHookView().addStatusPanel(getRecordsPanel());
+            extensionHook.addProxyListener(getProxyListener());
         }
     }
 
@@ -113,5 +116,17 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
             recordsDialog.init();
         }
         recordsDialog.setVisible(true);
+    }
+
+    public ProxyListener getProxyListener() {
+        if (proxyListener == null) {
+            proxyListener = new ProxyRecordsListener();
+        }
+        return proxyListener;
+    }
+    
+
+    public void setProxyListener(ProxyRecordsListener proxyListener) {
+        this.proxyListener = proxyListener;
     }
 }
