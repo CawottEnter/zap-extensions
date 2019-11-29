@@ -65,6 +65,10 @@ public class RecordsResultsTable extends HistoryReferencesTable {
                 Control.getSingleton().getExtensionLoader().getExtension(ExtensionHistory.class);
     }
 
+    public ExtensionHistory getExtensionHistory() {
+        return extensionHistory;
+    }
+
     /**
      * A {@link org.jdesktop.swingx.decorator.Highlighter Highlighter} for a column that indicates,
      * using icons and text, whether or not an entry was processed, that is, is or not in scope.
@@ -120,7 +124,8 @@ public class RecordsResultsTable extends HistoryReferencesTable {
          * code which doesn't use the Swingx renderers would stop working otherwise.
          */
         // Method/JavaDoc copied from
-        // org.jdesktop.swingx.decorator.IconHighlighter#canHighlight(Component, ComponentAdapter)
+        // org.jdesktop.swingx.decorator.IconHighlighter#canHighlight(Component,
+        // ComponentAdapter)
         @Override
         protected boolean canHighlight(final Component component, final ComponentAdapter adapter) {
             return component instanceof IconAware || component instanceof JLabel;

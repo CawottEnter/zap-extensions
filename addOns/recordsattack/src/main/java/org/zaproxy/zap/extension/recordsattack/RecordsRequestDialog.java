@@ -91,13 +91,12 @@ public class RecordsRequestDialog extends StandardFieldsDialog {
 
     @Override
     public void save() {
-        // TODO Auto-generated method stub
-
+        this.extension.startRecord();
     }
 
     @Override
     public String validateFields() {
-        // TODO Auto-generated method stub
+        logger.info(" IL A APPUYER SUR SAVE !! ");
         return null;
     }
 

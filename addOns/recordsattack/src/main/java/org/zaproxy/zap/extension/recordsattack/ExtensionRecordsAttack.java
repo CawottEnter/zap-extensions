@@ -43,7 +43,7 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     private static final Logger logger = Logger.getLogger(ExtensionRecordsAttack.class);
     public static final int PROXY_LISTENER_ORDER = ProxyListenerLog.PROXY_LISTENER_ORDER + 1;
     public static final String NAME = "ExtensionRecordsAttack";
-    private SpiderListener spiderListener;
+    private ProxyRecordsListener proxyRecordsListener;
     private boolean recordsRunning;
 
     private static final List<Class<? extends Extension>> DEPENDENCIES;
@@ -57,8 +57,9 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
 
     private RecordsPanel recordsPanel = null;
     private RecordsRequestDialog recordsDialog = null;
-    private RecordsAttackAPI recordsAttackApi;
     private ZapMenuItem menuItemCustomScan;
+
+    private SaveDialog saveDialog = null;
 
     /**
      * initializes the extension
@@ -74,7 +75,6 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     @Override
     public void init() {
         super.init();
-        recordsAttackApi = new RecordsAttackAPI(this);
     }
 
     @Override
@@ -92,11 +92,11 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     public void hook(ExtensionHook extensionHook) {
         logger.info("Extension Records hooking");
         super.hook(extensionHook);
-        extensionHook.addApiImplementor(recordsAttackApi);
 
         if (getView() != null) {
             extensionHook.getHookView().addStatusPanel(getRecordsPanel());
             extensionHook.getHookMenu().addToolsMenuItem(getMenuItemCustomScan());
+            extensionHook.addProxyListener(getProxyRecordsListener());
         }
     }
 
@@ -157,44 +157,41 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
         recordsDialog.setVisible(true);
     }
 
-    RecordThread createSpiderThread(SpiderListener listener) {
-        RecordThread recordThread = new RecordThread(this, listener);
-        return recordThread;
+    public void showSaveDialog(SiteNode node) {
+        if (saveDialog == null) {
+            logger.error("SHOW DIALOG");
+            saveDialog =
+                    new SaveDialog(
+                            this,
+                            View.getSingleton().getMainFrame(),
+                            DisplayUtils.getScaledDimension(700, 500));
+            logger.error("INIT");
+            saveDialog.init();
+        }
+
+        saveDialog.setVisible(true);
     }
 
     public boolean isRecordRunning() {
         return recordsRunning;
     }
 
-    private void setRecordRunning(boolean running) {
-        recordsRunning = running;
+    public ProxyRecordsListener getProxyRecordsListener() {
+        if (proxyRecordsListener == null) {
+            proxyRecordsListener = new ProxyRecordsListener(this);
+        }
+        return proxyRecordsListener;
     }
 
-    /**
-     * Starts a new spider scan, with the given display name and using the given target.
-     *
-     * <p><strong>Note:</strong> The preferred method to start the scan is with {@link
-     * #startScan(AjaxSpiderTarget)}, unless a custom display name is really needed.
-     *
-     * @param displayName the name of the scan (to be displayed in UI)
-     * @param listener a listener that will be notified of the scan progress
-     * @throws IllegalStateException if the target is not allowed in the current {@link
-     *     org.parosproxy.paros.control.Control.Mode mode}.
-     */
-    @SuppressWarnings("fallthrough")
-    public void startRecord(String displayName, SpiderListener listener) {
-        if (getView() != null) {
-            switch (Control.getSingleton().getMode()) {
-                case safe:
-                case protect:
-                case standard:
-                case attack:
-                default:
-                    // No problem
-                    break;
-            }
+    public void setProxyRecordsListener(ProxyRecordsListener proxyRecordsListener) {
+        this.proxyRecordsListener = proxyRecordsListener;
+    }
 
-            getRecordsPanel().startRecord(displayName, listener);
-        }
+    /*
+     * Start record and modify buttons in pannel
+     */
+    public void startRecord() {
+        recordsPanel.startRecord();
+        getProxyRecordsListener().runRecord();
     }
 }

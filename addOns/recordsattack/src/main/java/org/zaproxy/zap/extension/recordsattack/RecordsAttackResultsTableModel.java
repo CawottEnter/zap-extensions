@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.event.TableModelEvent;
+import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.control.Control;
 import org.parosproxy.paros.extension.history.ExtensionHistory;
@@ -44,6 +45,8 @@ public class RecordsAttackResultsTableModel
         extends AbstractCustomColumnHistoryReferencesTableModel<
                 RecordsAttackResultsTableModel.AjaxSpiderTableEntry> {
     /** */
+    private static final Logger logger = Logger.getLogger(RecordsAttackResultsTableModel.class);
+
     private static final long serialVersionUID = 2310687869097101584L;
 
     private static final Column[] COLUMNS =
@@ -348,6 +351,7 @@ public class RecordsAttackResultsTableModel
     }
 
     public void addHistoryReference(HistoryReference historyReference, ResourceState state) {
+        logger.info("Record Attack result get add history reference");
         HistoryReference latestHistoryReference = historyReference;
         if (extensionHistory != null) {
             latestHistoryReference =
@@ -365,5 +369,13 @@ public class RecordsAttackResultsTableModel
                         fireTableRowsInserted(row, row);
                     }
                 });
+    }
+
+    public ExtensionHistory getExtensionHistory() {
+        return extensionHistory;
+    }
+
+    public List<AjaxSpiderTableEntry> getResources() {
+        return resources;
     }
 }

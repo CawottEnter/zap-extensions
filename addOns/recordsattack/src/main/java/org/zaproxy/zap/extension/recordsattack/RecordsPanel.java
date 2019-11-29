@@ -55,26 +55,31 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
 
     private JButton startRecordsButton;
     private JButton stopRecordsButton;
+    private JButton saveButton;
     private JLabel foundLabel = new JLabel();
     private ScanStatus scanStatus = null;
 
-    private HistoryReferencesTable spiderResultsTable;
+    private RecordsResultsTable spiderResultsTable;
 
     private RecordsAttackResultsTableModel spiderResultsTableModel =
             new RecordsAttackResultsTableModel();
 
-    private RecordThread runnable = null;
     private SortedSet<String> visitedUrls = new TreeSet<>();
     private int foundCount = 0;
 
     // private RecordsAttackResultsTableModel spiderResultsTableModel =
-    //         new RecordsAttackResultsTableModel();
+    // new RecordsAttackResultsTableModel();
 
     /** This is the default constructor */
     public RecordsPanel(ExtensionRecordsAttack e) {
         super();
         this.extension = e;
         initialize();
+    }
+
+    public RecordsAttackResultsTableModel getRecordsAttackResultsTableModel() {
+
+        return spiderResultsTableModel;
     }
 
     /** This method initializes this class and its attributes */
@@ -165,7 +170,6 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
             gridBagConstraints1.gridy = 0;
             gridBagConstraints1.insets = new java.awt.Insets(0, 0, 0, 0);
             gridBagConstraints1.anchor = java.awt.GridBagConstraints.WEST;
-
             gridBagConstraints2.gridx = 1;
             gridBagConstraints2.gridy = 0;
             gridBagConstraints2.insets = new java.awt.Insets(0, 0, 0, 0);
@@ -204,11 +208,50 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
 
             panelToolbar.add(getStartRecordsButton(), gridBagConstraints1);
             panelToolbar.add(getStopRecordsButton(), gridBagConstraints2);
+            panelToolbar.add(getSaveButton(), gridBagConstraints5);
 
             panelToolbar.add(t1, gridBagConstraintsX);
             panelToolbar.add(getOptionsButton(), gridBagConstraintsy);
         }
         return panelToolbar;
+    }
+
+    private JButton getSaveButton() {
+        if (saveButton == null) {
+            saveButton = new JButton();
+            saveButton.setText(
+                    this.extension.getMessages().getString("recordsattack.toolbar.button.save"));
+            saveButton.setIcon(
+                    new ImageIcon(
+                            RecordsPanel.class.getResource("/resource/icon/fugue/database.png")));
+            saveButton.setEnabled(false);
+            saveButton.addActionListener(
+                    new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            logger.info("Press on save");
+                            logger.error("Press on save");
+                            /*
+                             * logger.info("Appuie sur Save Button");
+                             *
+                             * for (HistoryReference reference : spiderResultsTableModel
+                             * .getExtensionHistory() .getSelectedHistoryReferences()) { logger.info("id :"
+                             * + reference.getHistoryId()); logger.info("type :" + reference.getMethod()); }
+                             * extension.showSaveDialog(null);
+                             *
+                             * for (AjaxSpiderTableEntry entry : spiderResultsTableModel.getResources()) {
+                             * logger.info("entry id :" + entry.getHistoryId()); logger.info("method :" +
+                             * entry.getMethod()); logger.info(" History reference : " +
+                             * entry.getHistoryReference()); try { logger.info( "hsitory reference" +
+                             * entry.getHistoryReference() .getHttpMessage() .getRequestBody() .toString());
+                             * } catch (HttpMalformedHeaderException | DatabaseException e1) { // TODO
+                             * Auto-generated catch block e1.printStackTrace(); } }
+                             */
+                            extension.showSaveDialog(null);
+                        }
+                    });
+        }
+        return saveButton;
     }
 
     /** @return The Start Scan Button */
@@ -217,6 +260,8 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
             startRecordsButton = new JButton();
             startRecordsButton.setText(
                     this.extension.getMessages().getString("recordsattack.toolbar.button.start"));
+            startRecordsButton.setIcon(
+                    new ImageIcon(RecordsPanel.class.getResource("/resource/icon/10/093.png")));
             startRecordsButton.setEnabled(!Mode.safe.equals(Control.getSingleton().getMode()));
             startRecordsButton.addActionListener(
                     new ActionListener() {
@@ -235,6 +280,8 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
             stopRecordsButton = new JButton();
             stopRecordsButton.setToolTipText(
                     this.extension.getMessages().getString("recordsattack.toolbar.button.stop"));
+            stopRecordsButton.setIcon(
+                    new ImageIcon(RecordsPanel.class.getResource("/resource/icon/16/142.png")));
             stopRecordsButton.setEnabled(false);
             stopRecordsButton.addActionListener(
                     new ActionListener() {
@@ -274,6 +321,15 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
     public void stopRecord() {
         this.getStartRecordsButton().setEnabled(true);
         this.getStopRecordsButton().setEnabled(false);
+        this.getSaveButton().setEnabled(true);
+        // Stop intercept requests
+        this.extension.getProxyRecordsListener().stopRecord();
+    }
+
+    public void startRecord() {
+        this.getStartRecordsButton().setEnabled(false);
+        this.getStopRecordsButton().setEnabled(true);
+        this.getSaveButton().setEnabled(false);
     }
 
     /**
@@ -298,28 +354,6 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
         return spiderResultsTable;
     }
 
-    public void startRecord(String displayName, SpiderListener listener) {
-
-        if (View.isInitialised()) {
-            // Show the tab in case its been closed
-            this.setTabFocus();
-            this.foundCount = 0;
-            this.foundLabel.setText(Integer.toString(this.foundCount));
-        }
-        this.runnable = extension.createSpiderThread(this);
-        this.getStartRecordsButton().setEnabled(false);
-        this.getStopRecordsButton().setEnabled(true);
-        spiderResultsTableModel.clear();
-        if (listener != null) {
-            this.runnable.addSpiderListener(listener);
-        }
-        try {
-            new Thread(runnable, "ZAP-RecordsRequest").start();
-        } catch (Exception e) {
-            logger.error(e);
-        }
-    }
-
     @Override
     public void spiderStarted() {
         // TODO Auto-generated method stub
@@ -329,25 +363,20 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
     private void resetPanelState() {}
 
     /**
-     * @param r history reference
+     * @param historyReference history reference
      * @param msg the http message
      * @param url the targeted url
      */
-    private boolean addHistoryUrl(HistoryReference r, HttpMessage msg, ResourceState state) {
-        if (isNewUrl(r, msg)) {
-            this.spiderResultsTableModel.addHistoryReference(r, state);
-            return true;
-        }
-        return false;
+    private boolean addHistoryUrl(
+            HistoryReference historyReference, HttpMessage msg, ResourceState state) {
+
+        this.spiderResultsTableModel.addHistoryReference(historyReference, state);
+        return true;
     }
 
-    /**
-     * @param r history reference
-     * @param msg the http message
-     * @return if the url is new or not
-     */
-    private boolean isNewUrl(HistoryReference r, HttpMessage msg) {
-        return !visitedUrls.contains(msg.getRequestHeader().getURI().toString());
+    @Override
+    public void spiderStopped() {
+        logger.info("Spider spiderStopped");
     }
 
     @Override
@@ -358,10 +387,5 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
             foundCount++;
             this.foundLabel.setText(Integer.toString(this.foundCount));
         }
-    }
-
-    @Override
-    public void spiderStopped() {
-        logger.info("Spider spiderStopped");
     }
 }
