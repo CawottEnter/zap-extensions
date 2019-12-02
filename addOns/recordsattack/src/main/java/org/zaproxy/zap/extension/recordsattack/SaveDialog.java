@@ -20,7 +20,17 @@
 package org.zaproxy.zap.extension.recordsattack;
 
 import java.awt.Dimension;
+import java.awt.Point;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import org.apache.log4j.Logger;
@@ -38,13 +48,19 @@ public class SaveDialog extends StandardFieldsDialog {
 
     private ExtensionRecordsAttack extension;
     private ExtensionUserManagement extUserMgmt;
-    protected static final String[] LABELS = {"SAVE", "PARAMETERS"};
+    protected static final String[] LABELS = {"SAVE", "PARAMETERS","URLS"};
 
     private static final String FIELD_NAME = "recordsattack.savedialog.label.name";
     private static final String FIELD_DESCRIPTION = "recordsattack.savedialog.label.description";
 
     /** */
     private static final long serialVersionUID = 1L;
+
+    private ParametersTableModel modelParametersSelected = null;
+    private ParametersTableModel modelParametersNotSelected = null;
+    private JTable tableParametersSelected = null;
+    private JTable tableParametersNotSelected = null;
+    private List<WrapperParameter> listParameters = null;
 
     public SaveDialog(ExtensionRecordsAttack ext, MainFrame owner, Dimension dim) {
         super(owner, "requestrecords.scandialog.save.title", dim, LABELS);
@@ -58,18 +74,63 @@ public class SaveDialog extends StandardFieldsDialog {
     public void init() {
         logger.debug("init ");
         this.removeAllFields();
-        String[] columnNames = {"First Name", "Last Name", "Sport", "# of Years", "Vegetarian"};
-        Object[][] data = {
-            {"Kathy", "Smith", "Snowboarding", new Integer(5), new Boolean(false)},
-            {"John", "Doe", "Rowing", new Integer(3), new Boolean(true)},
-            {"Sue", "Black", "Knitting", new Integer(2), new Boolean(false)},
-            {"Jane", "White", "Speed reading", new Integer(20), new Boolean(true)},
-            {"Joe", "Brown", "Pool", new Integer(10), new Boolean(false)}
-        };
-        JTable toto = new JTable(data, columnNames);
-        toto.createDefaultColumnsFromModel();
-        JTable toto2 = new JTable(new ParametersTableModel());
-        JSplitPane splitting = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, toto, toto2);
+
+        String headers[] = {"Name", "Value", "Count", "Type"};
+        String values[][] = {};
+
+        modelParametersSelected = new ParametersTableModel(values, headers);
+        modelParametersNotSelected = new ParametersTableModel(values, headers);
+
+        tableParametersSelected = new JTable(modelParametersSelected);
+        tableParametersNotSelected = new JTable(modelParametersNotSelected);
+        tableParametersSelected.setAutoCreateRowSorter(true);
+        tableParametersNotSelected.setAutoCreateRowSorter(true);
+
+        JScrollPane scrollPane = new JScrollPane(tableParametersSelected);
+        JScrollPane scrollPane2 = new JScrollPane(tableParametersNotSelected);
+        JPanel panel = new JPanel();
+        JPanel panel2 = new JPanel();
+        panel.add(scrollPane);
+        panel2.add(scrollPane2);
+        JSplitPane splitting = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, panel, panel2);
+
+        tableParametersSelected.addMouseListener(
+                new MouseAdapter() {
+                    public void mousePressed(MouseEvent mouseEvent) {
+                        JTable table = (JTable) mouseEvent.getSource();
+                        Point point = mouseEvent.getPoint();
+                        int row = table.rowAtPoint(point);
+                        if (mouseEvent.getClickCount() == 2 && table.getSelectedRow() != -1) {
+                            logger.info("ID r�cup�rer : " + table.getSelectedRow());
+                            Object[] rowToOtherTable =
+                                    modelParametersSelected.removeRow(table.getSelectedRow());
+                            modelParametersNotSelected.addRow(rowToOtherTable);
+                        }
+                    }
+                });
+        
+        
+        java.util.List<AjaxSpiderTableEntry> cloneHistory =
+                new ArrayList<AjaxSpiderTableEntry>(
+                        this.extension
+                                .getRecordsPanel()
+                                .getRecordsAttackResultsTableModel()
+                                .getResources());
+
+        fillTable(cloneHistory);
+
+        for (WrapperParameter parameter : listParameters) {
+            List<String[]> list = new ArrayList<String[]>();
+            list.add(
+                    new String[] {
+                        parameter.getName(),
+                        parameter.getValue(),
+                        String.valueOf(parameter.getUsed()),
+                        parameter.getMethod()
+                    });
+            Object[][] data2 = list.toArray(new String[0][0]);
+            modelParametersSelected.setData(data2);
+        }
         // super.tabOffsets.get(1);
         // this.addField(this.tabPanels.get(1), this.tabOffsets.get(1), "toito",
         // splitting,splitting,0.0D);
@@ -79,15 +140,6 @@ public class SaveDialog extends StandardFieldsDialog {
         this.addTextField(0, FIELD_DESCRIPTION, "Description");
         // this.addTableField(1, toto);
         this.add(splitting, 1);
-
-        // this.addTableField(0, field);
-        java.util.List<AjaxSpiderTableEntry> cloneHistory =
-                new ArrayList<AjaxSpiderTableEntry>(
-                        this.extension
-                                .getRecordsPanel()
-                                .getRecordsAttackResultsTableModel()
-                                .getResources());
-        for (AjaxSpiderTableEntry entry : cloneHistory) getParameter(entry.getHistoryReference());
 
         this.setCustomTabPanel(1, splitting);
         this.addPadding(1);
@@ -107,17 +159,121 @@ public class SaveDialog extends StandardFieldsDialog {
         return null;
     }
 
-    private ArrayList<String> getParameter(HistoryReference reference) {
-        String[] params;
+    private Map<String[], String> getParameter(HistoryReference reference) {
+        Map<String[], String> map = new HashMap<String[], String>();
         try {
-            params = reference.getHttpMessage().getParamNames();
-            for (String p : params) logger.info("PARAMETER FOUND : " + p);
+            map.put(reference.getHttpMessage().getParamNames(), reference.getMethod());
         } catch (HttpMalformedHeaderException | DatabaseException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
 
-        ArrayList<String> parameters = new ArrayList<String>();
+        return map;
+    }
+
+    private void fillTable(java.util.List<AjaxSpiderTableEntry> cloneHistory) {
+        listParameters = new ArrayList<WrapperParameter>();
+        for (AjaxSpiderTableEntry entry : cloneHistory) {
+            Map<String[], String> parametersAndMethod = getParameter(entry.getHistoryReference());
+            parametersAndMethod.forEach(
+                    (k, method) -> {
+                        for (String nameParam : k) {
+                            /*
+                             * TODO in Java 9 remplace them by .map(o -> o.getTime()).orElse(0L);
+                             * is more elegent
+                             *
+                             */
+
+                            Optional<WrapperParameter> maybeItExist =
+                                    containsParameter(listParameters, nameParam, method);
+                            maybeItExist.ifPresent(
+                                    p -> {
+                                        p.incrementValue();
+                                    });
+                            if (!maybeItExist.isPresent()) {
+                                listParameters.add(
+                                        new WrapperParameter(nameParam, "toto", 1, method));
+                            }
+                        }
+                    });
+        }
+    }
+
+    private Optional<WrapperParameter> containsParameter(
+            List<WrapperParameter> listParameters, String param, String method) {
+        logger.info("Param to print : " + param);
+        logger.info("method = " + method);
+        return listParameters.stream()
+                .filter(
+                        o ->
+                                o.getName().equals(param)
+                                        && o.getMethod() != null
+                                        && o.getMethod().equals(method))
+                .findFirst();
+    }
+}
+
+class WrapperParameter {
+    private String parameters;
+    private String value;
+    private int used;
+    private String method;
+
+    WrapperParameter(String parameters, String value, int used, String method) {
+        this.parameters = parameters;
+        this.setValue(value);
+        this.used = used;
+        this.method = method;
+    }
+
+    public void incrementValue() {
+        this.used++;
+    }
+
+    @Override
+    public boolean equals(Object parameterName) {
+        /*
+         * if(parameterName instanceof String) { String parameterNameStr =
+         * (String)parameterName; if (parameterNameStr.equals(parameterName)) return
+         * true; } return false;
+         */
+        return true;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    public int getUsed() {
+
+        return used;
+    }
+
+    public String getName() {
+
         return parameters;
+    }
+
+    /** Dummy override */
+    @Override
+    public int hashCode() {
+        return parameters.hashCode();
+    }
+
+    public String getMethod() {
+
+        return method;
+    }
+
+    static class ParametersSortingByUsedComparator implements Comparator<WrapperParameter> {
+
+        @Override
+        public int compare(WrapperParameter parameter1, WrapperParameter parameter2) {
+            return parameter1.getUsed() - parameter2.getUsed();
+        }
     }
 }

@@ -20,37 +20,83 @@
 package org.zaproxy.zap.extension.recordsattack;
 
 import javax.swing.table.AbstractTableModel;
+import org.apache.commons.lang3.ArrayUtils;
 
 public class ParametersTableModel extends AbstractTableModel {
     /** */
     private static final long serialVersionUID = -5012695302760110023L;
 
-    private final String[] headers = {"NAME", "VALUE"};
+    private String[] columnsHeader = null;
 
-    private String[][] data = {{"oui", "non"}, {"oui", "non"}};
+    private Object[][] rows = new Object[0][0];
 
-    public ParametersTableModel() {
-        super();
+    public ParametersTableModel(String[][] columns, String[] headers) {
+        this.columnsHeader = headers;
+        this.rows = columns;
+    }
+
+    public void setHeader(String[] newHeaders) {
+        columnsHeader = newHeaders;
     }
 
     @Override
     public int getColumnCount() {
-        return headers.length;
+        return columnsHeader.length;
     }
 
     @Override
     public int getRowCount() {
-        // TODO Auto-generated method stub
-        return 0;
+        return rows.length;
     }
 
     @Override
-    public Object getValueAt(int arg0, int arg1) {
-        // TODO Auto-generated method stub
-        return null;
+    public Object getValueAt(int rowIndex, int columnIndex) {
+        return rows[rowIndex][columnIndex];
     }
 
     public String getColumnName(int col) {
-        return headers[col];
+        return columnsHeader[col];
+    }
+
+    public boolean isCellEditable(int row, int column) {
+        // Aucune cellule �ditable
+        return false;
+    }
+
+    public void removeRows() {
+        this.rows = new Object[0][0];
+    }
+
+    /**
+     * Permet d'ajouter une ligne dans le tableau
+     *
+     * @param data
+     */
+    public void addRow(Object[] data) {
+        int indice = 0, nbRow = this.getRowCount(), nbCol = this.getColumnCount();
+        Object temp[][] = this.rows;
+        this.rows = new Object[nbRow + 1][nbCol];
+        for (Object[] value : temp) {
+            this.rows[indice++] = value;
+        }
+        this.rows[indice] = data;
+        temp = null;
+        // Cette m�thode permet d'avertir le tableau que les donn�es ont �t� modifi�es
+        // Ce qui permet une mise � jours compl�te du tableau
+        this.fireTableDataChanged();
+    }
+
+    /** Permet d'ajouter plusieurs lignes */
+    public void setData(Object[][] data) {
+        for (int i = 0; i < data.length; i++) {
+            addRow(data[i]);
+        }
+    }
+
+    public Object[] removeRow(int id) {
+        Object[] rowToReturn = this.rows[id];
+        this.rows = ArrayUtils.remove(this.rows, id);
+        this.fireTableDataChanged();
+        return rowToReturn;
     }
 }
