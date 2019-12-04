@@ -20,70 +20,80 @@
 package org.zaproxy.zap.extension.recordsattack;
 
 import java.io.IOException;
+import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.AbstractAppParamPlugin;
+import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.core.scanner.Category;
+import org.parosproxy.paros.model.Model;
 import org.parosproxy.paros.network.HttpMessage;
+import org.parosproxy.paros.network.HttpSender;
 
-public class Injection extends AbstractAppParamPlugin {
-    private static final String MESSAGE_PREFIX = "ascanalpha.recordsattack.";
+public class Injection extends PassiveScanner  {
 
-    @Override
-    public int getId() {
-        return 7610110;
-    }
+    /** Prefix for internationalised messages used by this rule */
 
-    @Override
-    public String getName() {
+    private static final String MESSAGE_PREFIX = "extension.recordsattack.";
+    private static final String[] PARAM_ATTACK_STRINGS = { "toto", "tat" };
+    private HttpSender httpSender;
+    private static final int PLUGIN_ID = 7610110;
+    private static Logger log = Logger.getLogger(Injection.class);
 
-        return Constant.messages.getString(MESSAGE_PREFIX + "name");
-    }
 
-    @Override
-    public String getDescription() {
 
-        return Constant.messages.getString(MESSAGE_PREFIX + "desc");
-    }
-
-    @Override
-    public int getCategory() {
-        return Category.INJECTION;
-    }
-
-    @Override
-    public String getSolution() {
-        return Constant.messages.getString(MESSAGE_PREFIX + "soln");
-    }
-
-    @Override
-    public String getReference() {
-        return Constant.messages.getString(MESSAGE_PREFIX + "refs");
-    }
 
     @Override
     public void scan(HttpMessage msg, String param, String value) {
 
-        // goes through all checks and stops if it finds a possible
+	// goes through all checks and stops if it finds a possible
 
-        // injection
-        String payload = "toto";
-        tryInjection(msg, param, payload);
+	// injection
+	String payload = "toto";
+	tryInjection(msg, param, payload);
     }
 
-    private void tryInjection(HttpMessage msg, String param, String payload) {
+    private void tryInjection(HttpMessage msg, String paramName, String payload) {
+	httpSender =
+		scanHttpRequestSend
+                new HttpSender(
+
+                        Model.getSingleton().getOptionsParam().getConnectionParam(),
+
+                        true,
+
+                        HttpSender.FUZZER_INITIATOR);
+        HttpMessage sourceMsg2 = msg.cloneRequest();
+        // setParameter(sourceMsg2, paramName, payload);
         try {
-            msg = sendRequest(msg, param, payload);
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            log.info("Try Injection, paramName =" + paramName);
+    	httpSender.sendAndReceive(msg);
+
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
         }
     }
 
-    private HttpMessage sendRequest(HttpMessage msg, String param, String value)
-            throws IOException {
-        msg = getNewMsg();
-        setParameter(msg, param, value);
-        sendAndReceive(msg);
-        return msg;
+    @Override
+
+    public int getRisk() {
+
+	return Alert.RISK_HIGH;
+
+    }
+
+    @Override
+
+    public int getCweId() {
+
+	return 89;
+
+    }
+
+    @Override
+
+    public int getWascId() {
+
+	return 19;
+
     }
 }

@@ -19,18 +19,47 @@
  */
 package org.zaproxy.zap.extension.recordsattack;
 
+import java.util.List;
+import org.apache.log4j.Logger;
+import org.parosproxy.paros.db.DatabaseException;
+import org.parosproxy.paros.model.HistoryReference;
+import org.parosproxy.paros.network.HttpMalformedHeaderException;
 import org.parosproxy.paros.network.HttpMessage;
 
 public class Scenario {
+    private static final Logger logger = Logger.getLogger(Scenario.class);
     private String name;
     private String comments;
+    private List<String> params;
+    private List<HistoryReference> historyReference;
 
-    Scenario(String name, String comments) {
+    Scenario(
+            String name,
+            String comments,
+            List<String> paramsSelected,
+            List<HistoryReference> references) {
         this.name = name;
         this.comments = comments;
+        this.params = paramsSelected;
+        this.historyReference = references;
     }
 
-    public void replayScenario() {}
+    public void replayScenario() {
+        for (String p : params) {
+            logger.info("attack on p : " + p);
+            for (HistoryReference reference : historyReference) {
+                try {
+                    logger.info("reference id : " + reference.getHistoryId());
+                    HttpMessage message = reference.getHttpMessage();
+                    String payload = "toto";
+                    sendRequest(message, p, payload);
+                } catch (HttpMalformedHeaderException | DatabaseException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 
     public void sendRequest(HttpMessage message, String param, String payload) {
 

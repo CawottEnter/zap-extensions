@@ -19,6 +19,7 @@
  */
 package org.zaproxy.zap.extension.recordsattack;
 
+import javax.swing.JCheckBox;
 import javax.swing.table.AbstractTableModel;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -59,8 +60,19 @@ public class ParametersTableModel extends AbstractTableModel {
     }
 
     public boolean isCellEditable(int row, int column) {
-        // Aucune cellule �ditable
+        Object o = getValueAt(0, column);
+        if (o instanceof JCheckBox) return true;
+        else if (o instanceof Boolean) return true;
         return false;
+    }
+
+    // Retourne la classe de la donn�e de la colonne
+    public Class<? extends Object> getColumnClass(int col) {
+        // On retourne le type de la cellule � la colonne demand�e
+        // On se moque de la ligne puisque les types de donn�es sont les m�mes quelle
+        // que soit la ligne
+        // On choisit donc la premi�re ligne
+        return this.rows[0][col].getClass();
     }
 
     public void removeRows() {
@@ -81,7 +93,8 @@ public class ParametersTableModel extends AbstractTableModel {
         }
         this.rows[indice] = data;
         temp = null;
-        // Cette m�thode permet d'avertir le tableau que les donn�es ont �t� modifi�es
+        // Cette m�thode permet d'avertir le tableau que les donn�es ont �t�
+        // modifi�es
         // Ce qui permet une mise � jours compl�te du tableau
         this.fireTableDataChanged();
     }
