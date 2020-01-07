@@ -56,6 +56,8 @@ public class SaveDialog extends StandardFieldsDialog {
 
     private static final String FIELD_NAME = "recordsattack.savedialog.label.name";
     private static final String FIELD_DESCRIPTION = "recordsattack.savedialog.label.description";
+    private static final String FIELD_AUTHENTIFICATION =
+            "recordsattack.savedialog.combofield.authentication";
 
     /** */
     private static final long serialVersionUID = 1L;
@@ -175,6 +177,16 @@ public class SaveDialog extends StandardFieldsDialog {
 
         this.addTextField(0, FIELD_NAME, "Description");
         this.addTextField(0, FIELD_DESCRIPTION, "Description");
+        List<String> authentifications = new ArrayList<String>();
+        this.extension
+                .getAuthentification()
+                .forEach(
+                        authentification -> {
+                            authentifications.add(
+                                    authentification.getId() + ":" + authentification.getName());
+                        });
+
+        this.addComboField(0, FIELD_AUTHENTIFICATION, authentifications, "toto");
         // this.addTableField(1, toto);
         this.add(splitting, 1);
 
@@ -229,7 +241,10 @@ public class SaveDialog extends StandardFieldsDialog {
                         ress -> {
                             references.add(ress.getHistoryReference());
                         });
-        Scenario scenario = new Scenario(nameScenario, nameDescription, paramsSelected, references);
+        int authId = Integer.valueOf(this.getStringValue(FIELD_AUTHENTIFICATION).split(":")[0]);
+        Authentification auth = this.extension.getAuthentificationById(authId);
+        Scenario scenario =
+                new Scenario(nameScenario, nameDescription, paramsSelected, references, auth);
         scenario.replayScenario();
     }
 

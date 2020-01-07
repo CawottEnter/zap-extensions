@@ -32,10 +32,6 @@ public interface SpiderListener {
         IO_ERROR
     }
 
-    void spiderStarted();
-
     void foundMessage(
             HistoryReference historyReference, HttpMessage httpMessage, ResourceState state);
-
-    void spiderStopped();
 }

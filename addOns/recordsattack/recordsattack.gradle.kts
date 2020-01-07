@@ -16,13 +16,17 @@ zapAddOn {
                 register("selenium") {
                     version.set("15.*")
                 }
+                register("ascanrules") {
+                    version.set("34.*")
+                }
             }
         }
     }
 
     val apiGenClasspath = configurations.detachedConfiguration(
         dependencies.create("org.zaproxy:zap:2.8.0"),
-        dependencies.create(parent!!.childProjects.get("selenium")!!)
+        dependencies.create(parent!!.childProjects.get("selenium")!!),
+        dependencies.create(parent!!.childProjects.get("ascanrules")!!)
     )
 
     apiClientGen {
@@ -38,6 +42,7 @@ zapAddOn {
 
 dependencies {
     compileOnly(parent!!.childProjects.get("selenium")!!)
+    compileOnly(parent!!.childProjects.get("ascanrules")!!)
     implementation(files("lib/crawljax-core-3.7.jar"))
     implementation("commons-math:commons-math:1.2")
     implementation("com.codahale.metrics:metrics-core:3.0.2")

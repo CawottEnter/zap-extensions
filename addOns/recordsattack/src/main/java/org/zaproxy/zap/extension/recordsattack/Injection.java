@@ -20,80 +20,79 @@
 package org.zaproxy.zap.extension.recordsattack;
 
 import java.io.IOException;
+import java.util.List;
 import org.apache.log4j.Logger;
-import org.parosproxy.paros.Constant;
-import org.parosproxy.paros.core.scanner.AbstractAppParamPlugin;
-import org.parosproxy.paros.core.scanner.Alert;
-import org.parosproxy.paros.core.scanner.Category;
+import org.parosproxy.paros.control.Control;
+import org.parosproxy.paros.extension.history.ExtensionHistory;
+import org.parosproxy.paros.model.HistoryReference;
 import org.parosproxy.paros.model.Model;
 import org.parosproxy.paros.network.HttpMessage;
 import org.parosproxy.paros.network.HttpSender;
+import org.zaproxy.zap.extension.recordsattack.refound.BufferOverflow;
 
-public class Injection extends PassiveScanner  {
+public class Injection {
 
     /** Prefix for internationalised messages used by this rule */
-
     private static final String MESSAGE_PREFIX = "extension.recordsattack.";
-    private static final String[] PARAM_ATTACK_STRINGS = { "toto", "tat" };
+
+    private static final String[] PARAM_ATTACK_STRINGS = {"toto", "tat"};
     private HttpSender httpSender;
     private static final int PLUGIN_ID = 7610110;
     private static Logger log = Logger.getLogger(Injection.class);
+    private List<String> paramsTarget;
 
+    // protected HostProcess parent;
 
+    // protected ScannerParam scannerParam;
 
-
-    @Override
     public void scan(HttpMessage msg, String param, String value) {
 
-	// goes through all checks and stops if it finds a possible
+        // goes through all checks and stops if it finds a possible
 
-	// injection
-	String payload = "toto";
-	tryInjection(msg, param, payload);
+        // injection
+        String payload = "toto";
+        tryInjection(msg, param, payload);
+        /*
+         * ConnectionParam connectionParam = new ConnectionParam(); scannerParam = new
+         * ScannerParam(); ScanPolicy scanPolicy = new ScanPolicy(); RuleConfigParam
+         * ruleConfigParam = new RuleConfigParam();
+         *
+         * Scanner parentScanner =
+         *
+         * new Scanner(scannerParam, connectionParam, scanPolicy, ruleConfigParam);
+         * parentScanner .start(target);
+         */
+
     }
 
     private void tryInjection(HttpMessage msg, String paramName, String payload) {
-	httpSender =
-		scanHttpRequestSend
+        BufferOverflow activeScanBufferOverflow = new BufferOverflow();
+        msg = msg.cloneRequest();
+        activeScanBufferOverflow.scan(msg, paramName, "toto");
+        log.info("AFTER new url :" + msg.getRequestHeader().getURI());
+        log.info("AFTER new url :" + msg.getRequestHeader().getURI());
+        log.info("AFTER new url :" + msg.getRequestHeader().getURI());
+        log.info("AFTER new url :" + msg.getRequestHeader().getURI());
+
+        HttpSender httpSender =
                 new HttpSender(
-
-                        Model.getSingleton().getOptionsParam().getConnectionParam(),
-
-                        true,
-
-                        HttpSender.FUZZER_INITIATOR);
-        HttpMessage sourceMsg2 = msg.cloneRequest();
-        // setParameter(sourceMsg2, paramName, payload);
+                        Model.getSingleton().getOptionsParam().getConnectionParam(), true, 101);
         try {
-            log.info("Try Injection, paramName =" + paramName);
-    	httpSender.sendAndReceive(msg);
-
-        } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            httpSender.sendAndReceive(msg);
+        } catch (IOException e) {
+            log.info("Erreur : e = " + e.getMessage());
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
+        ExtensionHistory extHistory =
+                ((ExtensionHistory)
+                        Control.getSingleton()
+                                .getExtensionLoader()
+                                .getExtension(ExtensionHistory.NAME));
+        extHistory.addHistory(msg, HistoryReference.TYPE_PROXIED);
     }
+    /*
+     * catch (Exception e) { log.error(e.getMessage(), e); }
+     */
 
-    @Override
-
-    public int getRisk() {
-
-	return Alert.RISK_HIGH;
-
-    }
-
-    @Override
-
-    public int getCweId() {
-
-	return 89;
-
-    }
-
-    @Override
-
-    public int getWascId() {
-
-	return 19;
-
-    }
 }

@@ -45,13 +45,14 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     public static final String NAME = "ExtensionRecordsAttack";
     private ProxyRecordsListener proxyRecordsListener;
     private boolean recordsRunning;
+    private static final List<Authentification> authentificationsList =
+            new ArrayList<Authentification>();
 
     private static final List<Class<? extends Extension>> DEPENDENCIES;
 
     static {
         List<Class<? extends Extension>> dependencies = new ArrayList<>(1);
         dependencies.add(ExtensionSelenium.class);
-
         DEPENDENCIES = Collections.unmodifiableList(dependencies);
     }
 
@@ -60,6 +61,7 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     private ZapMenuItem menuItemCustomScan;
 
     private SaveDialog saveDialog = null;
+    private AuthentificationDialog authentificationDialog = null;
 
     /**
      * initializes the extension
@@ -172,6 +174,20 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
         saveDialog.setVisible(true);
     }
 
+    public void showAuthentificationDialog(SiteNode node) {
+
+        if (authentificationDialog == null) {
+            authentificationDialog =
+                    new AuthentificationDialog(
+                            this,
+                            View.getSingleton().getMainFrame(),
+                            DisplayUtils.getScaledDimension(700, 500));
+            authentificationDialog.init();
+        }
+
+        authentificationDialog.setVisible(true);
+    }
+
     public boolean isRecordRunning() {
         return recordsRunning;
     }
@@ -193,5 +209,15 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     public void startRecord() {
         recordsPanel.startRecord();
         getProxyRecordsListener().runRecord();
+    }
+
+    public List<Authentification> getAuthentification() {
+        return authentificationsList;
+    }
+
+    public Authentification getAuthentificationById(int id) {
+        for (Authentification authentification : getAuthentification())
+            if (authentification.getId() == id) return authentification;
+        return null;
     }
 }
