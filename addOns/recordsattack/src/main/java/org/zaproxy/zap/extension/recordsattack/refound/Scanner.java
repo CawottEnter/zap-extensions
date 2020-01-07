@@ -194,4 +194,7 @@ public abstract class Scanner {
 
         return "";
     }
+    
+    public abstract boolean isFinish();
+    
 }

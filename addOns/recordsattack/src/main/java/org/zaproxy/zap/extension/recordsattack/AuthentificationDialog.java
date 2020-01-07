@@ -22,14 +22,19 @@ package org.zaproxy.zap.extension.recordsattack;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.log4j.Logger;
 import org.parosproxy.paros.control.Control;
-import org.parosproxy.paros.model.HistoryReference;
+import org.parosproxy.paros.model.Model;
+import org.parosproxy.paros.model.Session;
 import org.parosproxy.paros.view.MainFrame;
 import org.zaproxy.zap.extension.users.ExtensionUserManagement;
+import org.zaproxy.zap.model.Context;
 import org.zaproxy.zap.view.StandardFieldsDialog;
 
 public class AuthentificationDialog extends StandardFieldsDialog {
     /** */
+    private static final Logger logger = Logger.getLogger(AuthentificationDialog.class);
+
     private static final long serialVersionUID = 4925094056489672384L;
 
     private ExtensionRecordsAttack extension;
@@ -37,6 +42,7 @@ public class AuthentificationDialog extends StandardFieldsDialog {
     protected static final String[] LABELS = {"spiderajax.scandialog.tab.scope"};
     private static final String FIELD_NAME = "recordsattack.savedialog.label.name";
     private static final String FIELD_DESCRIPTION = "recordsattack.savedialog.label.description";
+    private static final String FIELD_CONTEXT = "spiderajax.scandialog.label.context";
 
     public AuthentificationDialog(ExtensionRecordsAttack ext, MainFrame owner, Dimension dim) {
         super(owner, "requestrecords.scandialog.save.title", dim, LABELS);
@@ -48,34 +54,48 @@ public class AuthentificationDialog extends StandardFieldsDialog {
     }
 
     public void init() {
-
+        List<String> ctxNames = new ArrayList<String>();
         this.addTextField(0, FIELD_NAME, "Name authentification");
         this.addTextField(0, FIELD_DESCRIPTION, "Description");
+        this.addComboField(0, FIELD_CONTEXT, new String[] {}, "");
+
+        Session session = Model.getSingleton().getSession();
+        List<Context> contexts = session.getContexts();
+
+
+        for (Context ctx : contexts) 
+            ctxNames.add(ctx.getName());
+        
+        this.setComboFields(FIELD_CONTEXT, ctxNames, "");
+        this.getField(FIELD_CONTEXT).setEnabled(ctxNames.size() > 1);
     }
 
-    @Override
-    public void save() {
-        String nameAuthentification = this.getStringValue(FIELD_NAME);
-        String descriptionAuthentification = this.getStringValue(FIELD_DESCRIPTION);
-        List<HistoryReference> references = new ArrayList<HistoryReference>();
-        this.extension
-                .getRecordsPanel()
-                .getRecordsAttackResultsTableModel()
-                .getResources()
-                .forEach(
-                        ress -> {
-                            references.add(ress.getHistoryReference());
-                        });
+    private Context getSelectedContext() {
+        String ctxName = this.getStringValue(FIELD_CONTEXT);
+        if (this.extUserMgmt != null && !this.isEmptyField(FIELD_CONTEXT)) {
+            Session session = Model.getSingleton().getSession();
+            return session.getContext(ctxName);
+        }
+        return null;
+    }
 
-        Authentification authentification =
-                new Authentification(nameAuthentification, descriptionAuthentification, references);
-        this.extension.getAuthentification().add(authentification);
-        this.extension.getRecordsPanel().getRecordsAttackResultsTableModel().clear();
+    String getNameAuthentification() {
+        return this.getStringValue(FIELD_NAME);
+    }
+
+    String getDescriptionAuthentification() {
+        return this.getStringValue(FIELD_DESCRIPTION);
     }
 
     @Override
     public String validateFields() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public void save() {
+        this.extension.setContext(getSelectedContext());
+        this.extension.getProxyRecordsListener().runRecord();
     }
 }

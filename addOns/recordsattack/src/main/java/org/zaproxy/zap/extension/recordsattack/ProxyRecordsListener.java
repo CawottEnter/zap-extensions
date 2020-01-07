@@ -21,6 +21,7 @@ package org.zaproxy.zap.extension.recordsattack;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.httpclient.URIException;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.core.proxy.ProxyListener;
 import org.parosproxy.paros.model.HistoryReference;
@@ -55,9 +56,18 @@ public class ProxyRecordsListener implements ProxyListener {
     @Override
     public boolean onHttpResponseReceive(HttpMessage msg) {
         if (record) {
-            SpiderListener.ResourceState state = SpiderListener.ResourceState.PROCESSED;
-            notifyPanelToAdd(msg, HistoryReference.TYPE_SPIDER_AJAX, state);
-            logger.info("Message receive");
+
+            try {
+                if (this.extension
+                        .getContext()
+                        .isIncluded(msg.getRequestHeader().getURI().getURI())) {
+                    SpiderListener.ResourceState state = SpiderListener.ResourceState.PROCESSED;
+                    notifyPanelToAdd(msg, HistoryReference.TYPE_SPIDER_AJAX, state);
+                }
+            } catch (URIException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
         return true;
     }

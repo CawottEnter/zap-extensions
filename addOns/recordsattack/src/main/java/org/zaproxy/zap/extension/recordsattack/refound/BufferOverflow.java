@@ -34,6 +34,7 @@ public class BufferOverflow extends Scanner {
 
     private static final int PLUGIN_ID = 30001;
     private static Logger log = Logger.getLogger(BufferOverflow.class);
+    
 
     @Override
     public int getId() {
@@ -161,7 +162,6 @@ public class BufferOverflow extends Scanner {
             String string2,
             String other,
             HttpMessage msg) {
-        // TODO Auto-generated method stub
 
     }
 

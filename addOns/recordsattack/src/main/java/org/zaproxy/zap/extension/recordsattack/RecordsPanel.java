@@ -25,6 +25,8 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -336,8 +338,7 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
                                 .getMessages()
                                 .getString(
                                         "recordsattack.toolbar.button.stop.record.authentification"));
-
-        this.extension.getProxyRecordsListener().runRecord();
+        this.extension.showAuthentificationDialog(null);
     }
 
     private void stopRecordAuthentification() {
@@ -351,7 +352,26 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
                                 .getMessages()
                                 .getString("recordsattack.toolbar.button.record.authentification"));
         this.extension.getProxyRecordsListener().stopRecord();
-        this.extension.showAuthentificationDialog(null);
+
+        String nameAuthentification =
+                this.extension.getAuthentificationDialog().getNameAuthentification();
+        String descritionAuthentification =
+                this.extension.getAuthentificationDialog().getDescriptionAuthentification();
+        List<HistoryReference> references = new ArrayList<HistoryReference>();
+
+        this.extension
+                .getRecordsPanel()
+                .getRecordsAttackResultsTableModel()
+                .getResources()
+                .forEach(
+                        ress -> {
+                            references.add(ress.getHistoryReference());
+                        });
+
+        Authentification authentification =
+                new Authentification(nameAuthentification, descritionAuthentification, references);
+        this.extension.getAuthentification().add(authentification);
+        this.extension.getRecordsPanel().getRecordsAttackResultsTableModel().clear();
     }
 
     /**

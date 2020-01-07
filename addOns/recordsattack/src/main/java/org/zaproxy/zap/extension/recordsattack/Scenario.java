@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.httpclient.URI;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.control.Control;
+import org.parosproxy.paros.core.scanner.Scanner;
 import org.parosproxy.paros.db.DatabaseException;
 import org.parosproxy.paros.extension.history.ExtensionHistory;
 import org.parosproxy.paros.model.HistoryReference;
@@ -39,6 +40,7 @@ import org.parosproxy.paros.network.HttpRequestHeader;
 import org.parosproxy.paros.network.HttpSender;
 import org.zaproxy.zap.extension.httpsessions.HttpSession;
 import org.zaproxy.zap.extension.httpsessions.HttpSessionTokensSet;
+import org.zaproxy.zap.extension.recordsattack.refound.BufferOverflow;
 import org.zaproxy.zap.network.HttpRequestBody;
 
 public class Scenario {
@@ -70,8 +72,17 @@ public class Scenario {
     }
 
     public void replayScenario() {
+	/*
+	 * On recupere les differents types d attaques selectionner par l utilisateur
+	 * Tant que le scanner ne dit pas de passer au scanner suivant, on rejoue l authentification et le scenario avec la nouvelle attaque
+	 *
+	 */
+	//TODO
+
+
         for (String p : params) {
-            // logger.info("attack on p : " + p);
+            boolean newtScanner = false;
+            
             TreeSet<HtmlParameter> cookies = authentification();
 
             for (HistoryReference reference : historyReference) {
@@ -105,37 +116,11 @@ public class Scenario {
                 message = reference.getHttpMessage();
                 HttpMessage sourceMsg2 = message.cloneRequest();
                 sourceMsg2.setHttpSession(session);
-                logger.info("cookie avant sourceMsg2 :" + sourceMsg2.getCookieParamsAsString());
                 List<HttpCookie> nullCookies = new ArrayList<HttpCookie>();
-                logger.info("Request Header : " + sourceMsg2.getRequestHeader());
-                logger.info("uri : " + sourceMsg2.getRequestHeader().getURI());
 
-                for (String s : sourceMsg2.getParamNames()) {
-                    logger.info("Parametre dedans : " + s);
-                    logger.debug("parametre dedans : " + s);
-                }
-                sourceMsg2
-                        .getFormParams()
-                        .forEach(
-                                t -> {
-                                    logger.info(
-                                            "get forms : "
-                                                    + t.getName()
-                                                    + " value : "
-                                                    + t.getValue());
-                                });
                 if (lastCookies == null) sourceMsg2.setCookies(nullCookies);
-                else {
+                else 
                     sourceMsg2.setCookieParams(lastCookies);
-                    sourceMsg2
-                            .getCookieParams()
-                            .forEach(
-                                    t -> {
-                                        if (t.getName().equalsIgnoreCase(d_sessionID))
-                                            id_session = t.getValue();
-                                    });
-                }
-
                 Pattern p = Pattern.compile("jsessionid=.*\\?");
                 Matcher matcher = p.matcher(sourceMsg2.getRequestHeader().getURI().getURI());
                 if (matcher.find()) {

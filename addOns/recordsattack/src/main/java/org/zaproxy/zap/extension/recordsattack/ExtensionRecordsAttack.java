@@ -35,6 +35,7 @@ import org.parosproxy.paros.extension.history.ProxyListenerLog;
 import org.parosproxy.paros.model.SiteNode;
 import org.parosproxy.paros.view.View;
 import org.zaproxy.zap.extension.selenium.ExtensionSelenium;
+import org.zaproxy.zap.model.Context;
 import org.zaproxy.zap.utils.DisplayUtils;
 import org.zaproxy.zap.view.ZapMenuItem;
 
@@ -49,6 +50,7 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
             new ArrayList<Authentification>();
 
     private static final List<Class<? extends Extension>> DEPENDENCIES;
+    private Context context;
 
     static {
         List<Class<? extends Extension>> dependencies = new ArrayList<>(1);
@@ -182,10 +184,13 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
                             this,
                             View.getSingleton().getMainFrame(),
                             DisplayUtils.getScaledDimension(700, 500));
-            authentificationDialog.init();
         }
-
+        authentificationDialog.init();
         authentificationDialog.setVisible(true);
+    }
+
+    public AuthentificationDialog getAuthentificationDialog() {
+        return authentificationDialog;
     }
 
     public boolean isRecordRunning() {
@@ -219,5 +224,13 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
         for (Authentification authentification : getAuthentification())
             if (authentification.getId() == id) return authentification;
         return null;
+    }
+
+    public Context getContext() {
+        return context;
+    }
+
+    public void setContext(Context context) {
+        this.context = context;
     }
 }
