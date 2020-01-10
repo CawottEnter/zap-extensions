@@ -55,6 +55,8 @@ public abstract class Scanner {
     private Authentification authentification;
     private String id_session;
 
+    private String[] kkeyValue;
+
     Scanner(Authentification authentification, String id_session, HttpSender httpSender) {
         this.authentification = authentification;
         this.id_session = id_session;
@@ -134,32 +136,32 @@ public abstract class Scanner {
 
             try {
                 message = reference.getHttpMessage();
-                HttpMessage sourceMsg2 = message.cloneRequest();
-                sourceMsg2.setHttpSession(session);
+
+                message.setHttpSession(session);
                 List<HttpCookie> nullCookies = new ArrayList<HttpCookie>();
 
-                if (lastCookies == null) sourceMsg2.setCookies(nullCookies);
-                else sourceMsg2.setCookieParams(lastCookies);
+                if (lastCookies == null) message.setCookies(nullCookies);
+                else message.setCookieParams(lastCookies);
                 Pattern p = Pattern.compile("jsessionid=.*\\?");
-                Matcher matcher = p.matcher(sourceMsg2.getRequestHeader().getURI().getURI());
+                Matcher matcher = p.matcher(message.getRequestHeader().getURI().getURI());
                 if (matcher.find()) {
                     @SuppressWarnings("deprecation")
                     URI newUrl =
                             new URI(matcher.replaceFirst(d_sessionID + "=" + id_session + "?"));
-                    HttpRequestHeader reqHeader = sourceMsg2.getRequestHeader();
-                    HttpRequestBody reqBody = sourceMsg2.getRequestBody();
+                    HttpRequestHeader reqHeader = message.getRequestHeader();
+                    HttpRequestBody reqBody = message.getRequestBody();
                     reqHeader.setURI(newUrl);
 
-                    sourceMsg2 = new HttpMessage(reqHeader, reqBody);
+                    message = new HttpMessage(reqHeader, reqBody);
                 }
-                httpSender.sendAndReceive(sourceMsg2, true);
-                lastCookies = sourceMsg2.getCookieParams();
+                httpSender.sendAndReceive(message, true);
+                lastCookies = message.getCookieParams();
                 ExtensionHistory extHistory =
                         ((ExtensionHistory)
                                 Control.getSingleton()
                                         .getExtensionLoader()
                                         .getExtension(ExtensionHistory.NAME));
-                extHistory.addHistory(sourceMsg2, HistoryReference.TYPE_PROXIED);
+                extHistory.addHistory(message, HistoryReference.TYPE_PROXIED);
             } catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -172,10 +174,6 @@ public abstract class Scanner {
      * TODO refaire avec une regex style replace
      */
     private void searchParamInUrlAndModify(HttpMessage message, String param, String value) {
-        logger.info("changement de " + param + " avec value : " + value);
-        logger.info("changement de " + param + " avec value : " + value);
-        logger.info("changement de " + param + " avec value : " + value);
-
         URI uri = message.getRequestHeader().getURI();
         List<String> accu = new ArrayList<String>();
         String[] paths = uri.toString().split("\\?");
@@ -205,27 +203,33 @@ public abstract class Scanner {
 
     @SuppressWarnings("unchecked")
     private void searchParamInBodyAndModify(HttpMessage message, String param, String value) {
-        logger.info("Avant, tete du nouveau truc: ");
-        message.getFormParams().forEach(t -> logger.info(t));
+        /*
+                logger.info("avant recuperation du message :" + message.getRequestBody().toString());
+                logger.info("Avant, tete du nouveau truc: ");
 
-        ArrayList<HtmlParameter> parameters =
-                getParamsFromRequest(message, HtmlParameter.Type.form);
+                getParamsFromRequest(message, HtmlParameter.Type.form)
+                        .forEach(t -> logger.info(t.getName() + ":" + t.getValue()));
+        */
+        ArrayList<HtmlParameter> parameters = parse(message.getRequestBody().toString());
+        /*
+        getParamsFromRequest(message, HtmlParameter.Type.form);
+        */
         ArrayList<HtmlParameter> cloned_set = new ArrayList<HtmlParameter>();
         cloned_set = (ArrayList<HtmlParameter>) parameters.clone();
+
         for (HtmlParameter p : cloned_set) {
 
             if (p.getName().equalsIgnoreCase(param)) {
-                HtmlParameter newParam =
-                        new HtmlParameter(HtmlParameter.Type.form, param, "A02-DNB-Tout");
+                logger.info("trouveeee :) ");
+                String note = message.getNote();
+                message.setNote(note + "\n trouve parametre : " + param);
+                HtmlParameter newParam = new HtmlParameter(HtmlParameter.Type.form, param, value);
                 parameters.remove(p);
                 parameters.add(newParam);
             }
         }
 
         setParamsFromRequest(parameters, message);
-        logger.info("Modifier, tete du nouveau truc: ");
-        getParamsFromRequest(message, HtmlParameter.Type.form)
-                .forEach(t -> logger.info(t.getName() + ":" + t.getValue()));
     }
 
     public ArrayList<HtmlParameter> getParamsFromRequest(HttpMessage msg, HtmlParameter.Type type) {
@@ -237,6 +241,59 @@ public abstract class Scanner {
         return htmlParameters;
     }
 
+    public ArrayList<HtmlParameter> parse(String paramStr) {
+
+        ArrayList<HtmlParameter> htmlParameters = new ArrayList<HtmlParameter>();
+        String KeyValuePairSeparators = "&";
+        String KeyValueSeparators = "=";
+        Pattern KeyValueSeparatorPattern = (Pattern.compile("[" + KeyValuePairSeparators + "]"));
+        if (paramStr != null) {
+
+            String[] keyValue = KeyValueSeparatorPattern.split(paramStr);
+
+            for (String s : keyValue) {
+
+                try {
+
+                    String[] keyEqValue = KeyValueSeparatorPattern.split(s);
+
+                    if (keyEqValue.length == 1) {
+                        //   htmlParameters.add(new HtmlParameter(HtmlParameter.Type.form,
+                        // p.getKey(),
+                        String[] kkeyValue = keyEqValue[0].split("=");
+
+                        htmlParameters.add(
+                                new HtmlParameter(
+                                        HtmlParameter.Type.form,
+                                        kkeyValue[0],
+                                        (kkeyValue.length > 1) ? kkeyValue[1] : ""));
+                        /*
+                        logger.info("keyEqValue.length == 1");
+                        logger.info("keyEqValue = " + keyEqValue[0]);
+                        logger.info("KeyValue : " + s);
+                        */
+
+                    } else if (keyEqValue.length > 1) {
+                        /*
+                        logger.info("keyEqValue.length > 1");
+                        logger.info("keyEqValue = " + keyEqValue[0]);
+                        logger.info(" keyEqValue[1] = " + keyEqValue[1]);
+                        */
+                    }
+
+                } catch (Exception e) {
+
+                    logger.error(e.getMessage(), e);
+                }
+            }
+        }
+
+        return htmlParameters;
+    }
+    /*
+        public ArrayList<HtmlParameter> getParamsFromRequest2(
+                HttpMessage msg, HtmlParameter.Type type) {}
+    */
     public void setParamsFromRequest(List<HtmlParameter> newparams, HttpMessage msg) {
         if (newparams.isEmpty()) {
             msg.getRequestBody().setBody("");

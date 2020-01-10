@@ -29,10 +29,8 @@ import org.parosproxy.paros.extension.history.ExtensionHistory;
 import org.parosproxy.paros.model.HistoryReference;
 import org.parosproxy.paros.network.HtmlParameter;
 import org.parosproxy.paros.network.HttpMessage;
-import org.parosproxy.paros.network.HttpResponseHeader;
 import org.parosproxy.paros.network.HttpSender;
 import org.zaproxy.zap.extension.recordsattack.Authentification;
-import org.zaproxy.zap.network.HttpResponseBody;
 
 public class Oracle extends Scanner {
     private static final Logger logger = Logger.getLogger(Oracle.class);
@@ -45,6 +43,7 @@ public class Oracle extends Scanner {
 
     @Override
     public void scan(List<HistoryReference> historyReference, String parameters) {
+        logger.info("Rentre dans scan Oracle");
         // En premier nous allons chercher la taille maximum accepte par le champ
         boolean size_max_done = false;
         String bufferSize = "";
@@ -52,36 +51,32 @@ public class Oracle extends Scanner {
             for (int i = 0; i < size_max_input; i++) bufferSize.concat("A");
 
             TreeSet<HtmlParameter> cookies = authentification();
+            HttpMessage sourceMsg2 = null;
             for (HistoryReference reference : historyReference) {
-                HttpMessage message;
+                logger.info("T2");
 
                 try {
-                    message = reference.getHttpMessage();
-                    HttpMessage sourceMsg2 = message.cloneRequest();
+                    HttpMessage message = reference.getHttpMessage();
+                    sourceMsg2 = message.cloneRequest();
                     sourceMsg2.setCookieParams(cookies);
-                    if (getParamNames(message).contains(parameters)) {
-                        HttpMessage _sourceMsg3 = message.cloneRequest();
-                        setParameter(_sourceMsg3, parameters, "A02-DNB-Tout");
-                        logger.info("Modifie :");
-                        logger.info("header : " + _sourceMsg3.getRequestHeader().toString());
-                        logger.info("body : " + _sourceMsg3.getRequestBody().toString());
 
-                        sourceMsg2.setNote("Bonne endroit :(");
-                        httpSender.sendAndReceive(sourceMsg2);
-                        logger.info("Other :");
-                        logger.info("header : " + sourceMsg2.getRequestHeader().toString());
-                        logger.info("body : " + sourceMsg2.getRequestBody().toString());
-                        // On regarde la reponse
-                        sourceMsg2.setNote("Bonne endroit :(");
-                        HttpResponseBody toto = sourceMsg2.getResponseBody();
-                        HttpResponseHeader headerResponse = sourceMsg2.getResponseHeader();
-                        logger.info("Reponse avec : " + headerResponse.getStatusCode());
+                    logger.info("Before : " + sourceMsg2.getRequestBody().toString());
+                    setParameter(sourceMsg2, parameters, "to");
+                    logger.info("After : " + sourceMsg2.getRequestBody().toString());
+
+                    logger.info("T3");
+                    /*
+                    if (getParamNames(sourceMsg2).contains(parameters)) {
+
+                        setParameter(sourceMsg2, parameters, "to");
                         size_max_input++;
-                        logger.info("size_max_input = " + size_max_input);
+                        // logger.info("size_max_input = " + size_max_input);
                         if (size_max_input > 2) size_max_done = true;
                         break;
-                    } else httpSender.sendAndReceive(sourceMsg2);
+                    }
+                    */
 
+                    httpSender.sendAndReceive(sourceMsg2);
                     ExtensionHistory extHistory =
                             ((ExtensionHistory)
                                     Control.getSingleton()
@@ -93,6 +88,13 @@ public class Oracle extends Scanner {
                 } catch (DatabaseException | IOException e) {
                     // TODO Auto-generated catch block
                     int _acc = 0;
+                    ExtensionHistory extHistory =
+                            ((ExtensionHistory)
+                                    Control.getSingleton()
+                                            .getExtensionLoader()
+                                            .getExtension(ExtensionHistory.NAME));
+                    // sourceMsg2.setNote("Test avec :" + payload);
+                    extHistory.addHistory(sourceMsg2, HistoryReference.TYPE_PROXIED);
                     size_max_input++;
                     while (_acc < 5) {
                         logger.info("Error : e = " + e.getMessage());
@@ -105,12 +107,6 @@ public class Oracle extends Scanner {
                 }
             }
         }
-        /*
-        for (char letter = ' '; letter < 274; letter++) {
-            char ch = letter;
-            logger.info("L'ORACLE DIT : " + ch);
-        }
-        */
     }
 
     @Override
