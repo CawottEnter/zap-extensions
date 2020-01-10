@@ -20,22 +20,46 @@
 package org.zaproxy.zap.extension.recordsattack.refound;
 
 import java.io.UnsupportedEncodingException;
+import java.net.HttpCookie;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.commons.httpclient.URI;
 import org.apache.commons.httpclient.URIException;
 import org.apache.log4j.Logger;
+import org.parosproxy.paros.control.Control;
 import org.parosproxy.paros.core.scanner.HostProcess;
+import org.parosproxy.paros.extension.history.ExtensionHistory;
+import org.parosproxy.paros.model.HistoryReference;
+import org.parosproxy.paros.model.Model;
 import org.parosproxy.paros.network.HtmlParameter;
 import org.parosproxy.paros.network.HttpMessage;
+import org.parosproxy.paros.network.HttpRequestHeader;
+import org.parosproxy.paros.network.HttpSender;
+import org.zaproxy.zap.extension.httpsessions.HttpSession;
+import org.zaproxy.zap.extension.httpsessions.HttpSessionTokensSet;
+import org.zaproxy.zap.extension.recordsattack.Authentification;
+import org.zaproxy.zap.network.HttpRequestBody;
 
 public abstract class Scanner {
     private static final Logger logger = Logger.getLogger(Scanner.class);
+
+    protected HttpSender httpSender;
+    private Authentification authentification;
+    private String id_session;
+
+    Scanner(Authentification authentification, String id_session, HttpSender httpSender) {
+        this.authentification = authentification;
+        this.id_session = id_session;
+        this.httpSender = httpSender;
+    }
 
     public int getId() {
         // TODO Auto-generated method stub
@@ -87,20 +111,71 @@ public abstract class Scanner {
      * @param param the name of the parameter under testing
      * @param value the clean value (no escaping is needed)
      */
-    public abstract void scan(HttpMessage msg, String param, String value);
+    public abstract void scan(List<HistoryReference> historyReference, String parameters);
 
     public void setParameter(HttpMessage message, String param, String value) {
         if (getParamNames(message).contains(param)) {
-            message.setNote("On va essayer de modifier le parametre :" + param);
+            String note = message.getNote();
+            message.setNote(note + "\n On va essayer de modifier le parametre :" + param);
             searchParamInUrlAndModify(message, param, value);
-            searchParamInBodyAndModify(message, param);
+            searchParamInBodyAndModify(message, param, value);
         }
+    }
+
+    protected TreeSet<HtmlParameter> authentification() {
+        // TODO supprimer les debugs
+        HttpSessionTokensSet tokenSet = new HttpSessionTokensSet();
+        HttpSession session = new HttpSession("testSession", tokenSet);
+
+        TreeSet<HtmlParameter> lastCookies = null;
+        final String d_sessionID = "jsessionid";
+        for (HistoryReference reference : this.getAuthentification().getReferences()) {
+            HttpMessage message;
+
+            try {
+                message = reference.getHttpMessage();
+                HttpMessage sourceMsg2 = message.cloneRequest();
+                sourceMsg2.setHttpSession(session);
+                List<HttpCookie> nullCookies = new ArrayList<HttpCookie>();
+
+                if (lastCookies == null) sourceMsg2.setCookies(nullCookies);
+                else sourceMsg2.setCookieParams(lastCookies);
+                Pattern p = Pattern.compile("jsessionid=.*\\?");
+                Matcher matcher = p.matcher(sourceMsg2.getRequestHeader().getURI().getURI());
+                if (matcher.find()) {
+                    @SuppressWarnings("deprecation")
+                    URI newUrl =
+                            new URI(matcher.replaceFirst(d_sessionID + "=" + id_session + "?"));
+                    HttpRequestHeader reqHeader = sourceMsg2.getRequestHeader();
+                    HttpRequestBody reqBody = sourceMsg2.getRequestBody();
+                    reqHeader.setURI(newUrl);
+
+                    sourceMsg2 = new HttpMessage(reqHeader, reqBody);
+                }
+                httpSender.sendAndReceive(sourceMsg2, true);
+                lastCookies = sourceMsg2.getCookieParams();
+                ExtensionHistory extHistory =
+                        ((ExtensionHistory)
+                                Control.getSingleton()
+                                        .getExtensionLoader()
+                                        .getExtension(ExtensionHistory.NAME));
+                extHistory.addHistory(sourceMsg2, HistoryReference.TYPE_PROXIED);
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+        return lastCookies;
     }
 
     /*
      * TODO refaire avec une regex style replace
      */
     private void searchParamInUrlAndModify(HttpMessage message, String param, String value) {
+        logger.info("changement de " + param + " avec value : " + value);
+        logger.info("changement de " + param + " avec value : " + value);
+        logger.info("changement de " + param + " avec value : " + value);
+
         URI uri = message.getRequestHeader().getURI();
         List<String> accu = new ArrayList<String>();
         String[] paths = uri.toString().split("\\?");
@@ -111,7 +186,7 @@ public abstract class Scanner {
         int acc = 0;
         while (acc < paths.length) {
             if (paths[acc].split("=")[0].equalsIgnoreCase(param)) {
-                paths[acc] = param + "=" + value;
+                paths[acc] = param + "=" + getEscapedValue(value);
             }
             acc++;
         }
@@ -119,14 +194,9 @@ public abstract class Scanner {
             accu.add("&" + s);
         }
         try {
-            URI newURI = new URI(String.join("", accu), true);
+            String parameters = String.join("", accu);
+            URI newURI = new URI(parameters, true);
             message.getRequestHeader().setURI(newURI);
-            logger.info("new url :" + message.getRequestHeader().getURI());
-            logger.info("new url :" + message.getRequestHeader().getURI());
-            logger.info("new url :" + message.getRequestHeader().getURI());
-            logger.info("new url :" + message.getRequestHeader().getURI());
-            logger.info("new url :" + message.getRequestHeader().getURI());
-
         } catch (URIException | NullPointerException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -134,20 +204,61 @@ public abstract class Scanner {
     }
 
     @SuppressWarnings("unchecked")
-    private void searchParamInBodyAndModify(HttpMessage message, String param) {
-        TreeSet<HtmlParameter> parameters = message.getFormParams();
-        TreeSet<HtmlParameter> cloned_set = new TreeSet<HtmlParameter>();
-        cloned_set = (TreeSet<HtmlParameter>) parameters.clone();
+    private void searchParamInBodyAndModify(HttpMessage message, String param, String value) {
+        logger.info("Avant, tete du nouveau truc: ");
+        message.getFormParams().forEach(t -> logger.info(t));
+
+        ArrayList<HtmlParameter> parameters =
+                getParamsFromRequest(message, HtmlParameter.Type.form);
+        ArrayList<HtmlParameter> cloned_set = new ArrayList<HtmlParameter>();
+        cloned_set = (ArrayList<HtmlParameter>) parameters.clone();
         for (HtmlParameter p : cloned_set) {
+
             if (p.getName().equalsIgnoreCase(param)) {
-                HtmlParameter newParam = new HtmlParameter(HtmlParameter.Type.form, param, "toto");
+                HtmlParameter newParam =
+                        new HtmlParameter(HtmlParameter.Type.form, param, "A02-DNB-Tout");
                 parameters.remove(p);
                 parameters.add(newParam);
             }
         }
-        message.setFormParams(parameters);
+
+        setParamsFromRequest(parameters, message);
+        logger.info("Modifier, tete du nouveau truc: ");
+        getParamsFromRequest(message, HtmlParameter.Type.form)
+                .forEach(t -> logger.info(t.getName() + ":" + t.getValue()));
     }
 
+    public ArrayList<HtmlParameter> getParamsFromRequest(HttpMessage msg, HtmlParameter.Type type) {
+        Map<String, String> paramMap = Model.getSingleton().getSession().getParams(msg, type);
+        ArrayList<HtmlParameter> htmlParameters = new ArrayList<HtmlParameter>();
+        for (Map.Entry<String, String> p : paramMap.entrySet()) {
+            htmlParameters.add(new HtmlParameter(type, p.getKey(), p.getValue()));
+        }
+        return htmlParameters;
+    }
+
+    public void setParamsFromRequest(List<HtmlParameter> newparams, HttpMessage msg) {
+        if (newparams.isEmpty()) {
+            msg.getRequestBody().setBody("");
+            return;
+        }
+
+        StringBuilder postData = new StringBuilder();
+        for (HtmlParameter param : newparams) {
+            postData.append(param.getName());
+            postData.append("=");
+            postData.append(param.getValue());
+            postData.append("&");
+        }
+
+        String data = "";
+
+        if (postData.length() != 0) {
+
+            data = postData.substring(0, postData.length() - 1);
+        }
+        msg.getRequestBody().setBody(data);
+    }
     // ZAP: Added getParamNames
     public Vector<String> getParamNames(HttpMessage message) {
         Vector<String> v = new Vector<>();
@@ -194,7 +305,14 @@ public abstract class Scanner {
 
         return "";
     }
-    
+
     public abstract boolean isFinish();
-    
+
+    public Authentification getAuthentification() {
+        return authentification;
+    }
+
+    public void setAuthentification(Authentification authentification) {
+        this.authentification = authentification;
+    }
 }

@@ -28,19 +28,17 @@ import java.util.regex.Pattern;
 import org.apache.commons.httpclient.URI;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.control.Control;
-import org.parosproxy.paros.core.scanner.Scanner;
-import org.parosproxy.paros.db.DatabaseException;
 import org.parosproxy.paros.extension.history.ExtensionHistory;
 import org.parosproxy.paros.model.HistoryReference;
 import org.parosproxy.paros.model.Model;
 import org.parosproxy.paros.network.HtmlParameter;
-import org.parosproxy.paros.network.HttpMalformedHeaderException;
 import org.parosproxy.paros.network.HttpMessage;
 import org.parosproxy.paros.network.HttpRequestHeader;
 import org.parosproxy.paros.network.HttpSender;
 import org.zaproxy.zap.extension.httpsessions.HttpSession;
 import org.zaproxy.zap.extension.httpsessions.HttpSessionTokensSet;
-import org.zaproxy.zap.extension.recordsattack.refound.BufferOverflow;
+import org.zaproxy.zap.extension.recordsattack.refound.Oracle;
+import org.zaproxy.zap.extension.recordsattack.refound.Scanner;
 import org.zaproxy.zap.network.HttpRequestBody;
 
 public class Scenario {
@@ -64,7 +62,7 @@ public class Scenario {
         this.params = paramsSelected;
         this.historyReference = references;
         this.authentification = authentification;
-        httpSender =
+        this.httpSender =
                 new HttpSender(
                         Model.getSingleton().getOptionsParam().getConnectionParam(),
                         true,
@@ -72,32 +70,47 @@ public class Scenario {
     }
 
     public void replayScenario() {
-	/*
-	 * On recupere les differents types d attaques selectionner par l utilisateur
-	 * Tant que le scanner ne dit pas de passer au scanner suivant, on rejoue l authentification et le scenario avec la nouvelle attaque
-	 *
-	 */
-	//TODO
+        /*
+         * On recupere les differents types d attaques selectionner par l utilisateur
+         * Tant que le scanner ne dit pas de passer au scanner suivant, on rejoue l authentification et le scenario avec la nouvelle attaque
+         *
+         */
+        // TODO
 
+        // TODO remplacer par liste des scanners
+        for (int i = 0; i < 1; i++) {
+            for (String p : params) {
+                boolean newtScanner = false;
+                boolean stop = false;
+                /*
+                Scanner PersistentXSS =
+                        new PersistentXSSAttack(authentification, id_session, httpSender);
+                PersistentXSS.scan(historyReference, p);
+                */
 
-        for (String p : params) {
-            boolean newtScanner = false;
-            
-            TreeSet<HtmlParameter> cookies = authentification();
+                Scanner oracle = new Oracle(authentification, id_session, httpSender);
+                oracle.scan(historyReference, p);
 
-            for (HistoryReference reference : historyReference) {
-                try {
-                    logger.info("reference id : " + reference.getHistoryId());
-                    HttpMessage message = reference.getHttpMessage();
-                    String payload = "toto";
-                    HttpMessage sourceMsg2 = message.cloneRequest();
-                    sourceMsg2.setCookieParams(cookies);
-                    sendRequest(sourceMsg2, p, payload);
-                    cookies = sourceMsg2.getCookieParams();
-                } catch (HttpMalformedHeaderException
-                        | DatabaseException e) { // TODO Auto-generated catch block
-                    e.printStackTrace();
+                /*
+
+                    TreeSet<HtmlParameter> cookies = authentification();
+
+                    for (HistoryReference reference : historyReference) {
+                        try {
+                            logger.info("reference id : " + reference.getHistoryId());
+                            HttpMessage message = reference.getHttpMessage();
+                            String payload = "toto";
+                            HttpMessage sourceMsg2 = message.cloneRequest();
+                            sourceMsg2.setCookieParams(cookies);
+                            sendRequest(sourceMsg2, p, payload);
+                            cookies = sourceMsg2.getCookieParams();
+                        } catch (HttpMalformedHeaderException
+                                | DatabaseException e) { // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                    }
                 }
+                */
             }
         }
     }
@@ -119,8 +132,7 @@ public class Scenario {
                 List<HttpCookie> nullCookies = new ArrayList<HttpCookie>();
 
                 if (lastCookies == null) sourceMsg2.setCookies(nullCookies);
-                else 
-                    sourceMsg2.setCookieParams(lastCookies);
+                else sourceMsg2.setCookieParams(lastCookies);
                 Pattern p = Pattern.compile("jsessionid=.*\\?");
                 Matcher matcher = p.matcher(sourceMsg2.getRequestHeader().getURI().getURI());
                 if (matcher.find()) {
@@ -153,7 +165,7 @@ public class Scenario {
     public void sendRequest(HttpMessage message, String param, String payload) {
 
         Injection injection = new Injection();
-        injection.scan(message, param, payload);
+        //  injection.scan(message, param, payload);
     }
 
     public Authentification getAuthentification() {

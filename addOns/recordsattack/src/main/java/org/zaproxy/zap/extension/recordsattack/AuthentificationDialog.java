@@ -62,10 +62,8 @@ public class AuthentificationDialog extends StandardFieldsDialog {
         Session session = Model.getSingleton().getSession();
         List<Context> contexts = session.getContexts();
 
+        for (Context ctx : contexts) ctxNames.add(ctx.getName());
 
-        for (Context ctx : contexts) 
-            ctxNames.add(ctx.getName());
-        
         this.setComboFields(FIELD_CONTEXT, ctxNames, "");
         this.getField(FIELD_CONTEXT).setEnabled(ctxNames.size() > 1);
     }

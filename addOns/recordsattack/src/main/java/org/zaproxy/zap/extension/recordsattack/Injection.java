@@ -19,25 +19,10 @@
  */
 package org.zaproxy.zap.extension.recordsattack;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.log4j.Logger;
-import org.parosproxy.paros.control.Control;
-import org.parosproxy.paros.core.scanner.Alert;
-import org.parosproxy.paros.core.scanner.HostProcess;
-import org.parosproxy.paros.core.scanner.Scanner;
-import org.parosproxy.paros.core.scanner.ScannerParam;
-import org.parosproxy.paros.extension.history.ExtensionHistory;
-import org.parosproxy.paros.model.HistoryReference;
-import org.parosproxy.paros.model.Model;
-import org.parosproxy.paros.network.ConnectionParam;
 import org.parosproxy.paros.network.HttpMessage;
 import org.parosproxy.paros.network.HttpSender;
-import org.zaproxy.zap.extension.ascan.ScanPolicy;
-import org.zaproxy.zap.extension.recordsattack.refound.BufferOverflow;
-import org.zaproxy.zap.extension.ruleconfig.RuleConfigParam;
-import org.zaproxy.zap.utils.ZapXmlConfiguration;
 
 public class Injection {
 
@@ -54,25 +39,19 @@ public class Injection {
 
     // protected ScannerParam scannerParam;
 
-    public void scan(HttpMessage msg, String param, String value) {
+    public void scan(List<HttpMessage> msgs, String param, String value) {
 
         // goes through all checks and stops if it finds a possible
 
         String payload = "toto";
-        tryInjection(msg, param, payload);
-
-
+        // tryInjection(msg, param, payload);
     }
 
     private void tryInjection(HttpMessage msg, String paramName, String payload) {
+        /*
         BufferOverflow activeScanBufferOverflow = new BufferOverflow();
         msg = msg.cloneRequest();
         activeScanBufferOverflow.scan(msg, paramName, "toto");
-        log.info("AFTER new url :" + msg.getRequestHeader().getURI());
-        log.info("AFTER new url :" + msg.getRequestHeader().getURI());
-        log.info("AFTER new url :" + msg.getRequestHeader().getURI());
-        log.info("AFTER new url :" + msg.getRequestHeader().getURI());
-
         HttpSender httpSender =
                 new HttpSender(
                         Model.getSingleton().getOptionsParam().getConnectionParam(), true, 101);
@@ -89,6 +68,7 @@ public class Injection {
                                 .getExtensionLoader()
                                 .getExtension(ExtensionHistory.NAME));
         extHistory.addHistory(msg, HistoryReference.TYPE_PROXIED);
+        */
     }
     /*
      * catch (Exception e) { log.error(e.getMessage(), e); }

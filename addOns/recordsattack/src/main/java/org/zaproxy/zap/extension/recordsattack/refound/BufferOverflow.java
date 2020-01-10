@@ -19,22 +19,30 @@
  */
 package org.zaproxy.zap.extension.recordsattack.refound;
 
+import java.util.List;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.Alert;
 import org.parosproxy.paros.core.scanner.Category;
+import org.parosproxy.paros.model.HistoryReference;
 import org.parosproxy.paros.network.HttpMessage;
+import org.parosproxy.paros.network.HttpSender;
+import org.zaproxy.zap.extension.recordsattack.Authentification;
 import org.zaproxy.zap.model.Tech;
 import org.zaproxy.zap.model.TechSet;
 
 public class BufferOverflow extends Scanner {
+
+    BufferOverflow(Authentification authentification, String id_session, HttpSender httpSender) {
+        super(authentification, id_session, httpSender);
+        // TODO Auto-generated constructor stub
+    }
 
     /** Prefix for internationalised messages used by this rule */
     private static final String MESSAGE_PREFIX = "ascanrules.bufferoverflow.";
 
     private static final int PLUGIN_ID = 30001;
     private static Logger log = Logger.getLogger(BufferOverflow.class);
-    
 
     @Override
     public int getId() {
@@ -82,7 +90,6 @@ public class BufferOverflow extends Scanner {
      * org.parosproxy.paros.core.scanner.AbstractAppParamPlugin#scan(org.parosproxy.
      * paros.network.HttpMessage, java.lang.String, java.lang.String)
      */
-    @Override
     public void scan(HttpMessage msg, String param, String value) {
         setParameter(msg, param, value);
         /*
@@ -161,9 +168,7 @@ public class BufferOverflow extends Scanner {
             String param,
             String string2,
             String other,
-            HttpMessage msg) {
-
-    }
+            HttpMessage msg) {}
 
     public int getRisk() {
         return Alert.RISK_MEDIUM;
@@ -184,5 +189,17 @@ public class BufferOverflow extends Scanner {
             sb1.append((char) character);
         }
         return sb1.toString();
+    }
+
+    @Override
+    public void scan(List<HistoryReference> historyReference, String parameters) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public boolean isFinish() {
+        // TODO Auto-generated method stub
+        return false;
     }
 }
