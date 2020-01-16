@@ -46,7 +46,7 @@ dependencies {
     implementation(files("lib/crawljax-core-3.7.jar"))
     implementation("commons-math:commons-math:1.2")
     implementation("net.lightbody.bmp:browsermob-core:2.1.5")
-    implementation("net.lightbody.bmp:browsermob-proxy:2.1.5
+    implementation("net.lightbody.bmp:browsermob-proxy:2.1.5")
     implementation("com.codahale.metrics:metrics-core:3.0.2")
     implementation("com.google.code.findbugs:jsr305:3.0.0")
     implementation("com.google.inject.extensions:guice-assistedinject:3.0") {
