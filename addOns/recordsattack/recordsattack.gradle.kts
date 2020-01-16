@@ -43,6 +43,8 @@ zapAddOn {
 dependencies {
     compileOnly(parent!!.childProjects.get("selenium")!!)
     compileOnly(parent!!.childProjects.get("ascanrules")!!)
+    implementation("net.lightbody.bmp:browsermob-core:2.1.5")
+    implementation("net.lightbody.bmp:browsermob-proxy:2.1.5")
     implementation(files("lib/crawljax-core-3.7.jar"))
     implementation("commons-math:commons-math:1.2")
     implementation("com.codahale.metrics:metrics-core:3.0.2")

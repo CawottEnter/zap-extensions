@@ -37,7 +37,7 @@ import org.parosproxy.paros.network.HttpRequestHeader;
 import org.parosproxy.paros.network.HttpSender;
 import org.zaproxy.zap.extension.httpsessions.HttpSession;
 import org.zaproxy.zap.extension.httpsessions.HttpSessionTokensSet;
-import org.zaproxy.zap.extension.recordsattack.refound.Oracle;
+import org.zaproxy.zap.extension.recordsattack.refound.PersistentXSSAttack;
 import org.zaproxy.zap.extension.recordsattack.refound.Scanner;
 import org.zaproxy.zap.network.HttpRequestBody;
 
@@ -87,10 +87,11 @@ public class Scenario {
                         new PersistentXSSAttack(authentification, id_session, httpSender);
                 PersistentXSS.scan(historyReference, p);
                 */
+                // BrowserMobProxy server = new BrowserMobProxyServer();
 
-                Scanner oracle = new Oracle(authentification, id_session, httpSender);
+                Scanner oracle = new PersistentXSSAttack(authentification, id_session, httpSender);
                 oracle.scan(historyReference, p);
-
+                // BrowserMobProxy proxy = new BrowserMobProxyServer();
                 /*
 
                     TreeSet<HtmlParameter> cookies = authentification();

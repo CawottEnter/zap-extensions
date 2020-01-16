@@ -19,6 +19,7 @@
  */
 package org.zaproxy.zap.extension.recordsattack.refound;
 
+import com.crawljax.core.CrawljaxRunner;
 import java.io.IOException;
 import java.util.List;
 import java.util.TreeSet;
@@ -31,6 +32,7 @@ import org.parosproxy.paros.network.HtmlParameter;
 import org.parosproxy.paros.network.HttpMessage;
 import org.parosproxy.paros.network.HttpSender;
 import org.zaproxy.zap.extension.recordsattack.Authentification;
+import org.zaproxy.zap.extension.selenium.ExtensionSelenium;
 import org.zaproxy.zap.model.Vulnerabilities;
 import org.zaproxy.zap.model.Vulnerability;
 
@@ -46,15 +48,25 @@ public class PersistentXSSAttack extends Scanner {
     private static final String MESSAGE_PREFIX = "ascanrules.testpersistentxssattack.";
 
     private static final String[] GENERIC_SCRIPT_ALERT = {
-        "<script>alert(1);</script>", "\"><inpu/onmouseover=alert("
+        "<script>alert(1);</script>", "\"><inpu/onmouseover=alert(", "plouf"
     };
     private static Vulnerability vuln = Vulnerabilities.getVulnerability("wasc_8");
     private static Logger logger = Logger.getLogger(PersistentXSSAttack.class);
 
     public void scan(List<HistoryReference> historyReference, String parameter) {
         boolean vulnerable = false;
+        CrawljaxRunner crawljax;
+        ExtensionSelenium extSelenium =
+                Control.getSingleton().getExtensionLoader().getExtension(ExtensionSelenium.class);
+        // CrawljaxConfigurationBuilder builder =
+        //          CrawljaxConfiguration.builderFor(
+        //
+        // "https://sapdcy2.in.ac-rennes.fr/portailgest/portal/accueil?sso=O&employeeMail=julien.alexandre@ac-rennes.fr");
+        // crawljax.call();
+
+        // new BrowserMobProxyServer();
         int finish = 0;
-        while (!vulnerable && finish < GENERIC_SCRIPT_ALERT.length - 1) {
+        while (!vulnerable && finish < GENERIC_SCRIPT_ALERT.length) {
             String payload = GENERIC_SCRIPT_ALERT[finish];
             TreeSet<HtmlParameter> cookies = authentification();
             for (HistoryReference reference : historyReference) {
