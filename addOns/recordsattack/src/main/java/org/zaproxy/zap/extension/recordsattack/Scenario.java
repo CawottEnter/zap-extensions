@@ -27,6 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.httpclient.URI;
 import org.apache.log4j.Logger;
+import org.openqa.selenium.WebDriver;
 import org.parosproxy.paros.control.Control;
 import org.parosproxy.paros.extension.history.ExtensionHistory;
 import org.parosproxy.paros.model.HistoryReference;
@@ -50,13 +51,15 @@ public class Scenario {
     private List<HistoryReference> historyReference;
     private HttpSender httpSender;
     private String id_session;
+    private ExtensionRecordsAttack extension;
 
     Scenario(
             String name,
             String comments,
             List<String> paramsSelected,
             List<HistoryReference> references,
-            Authentification authentification) {
+            Authentification authentification,
+            ExtensionRecordsAttack extension) {
         this.name = name;
         this.comments = comments;
         this.params = paramsSelected;
@@ -67,9 +70,11 @@ public class Scenario {
                         Model.getSingleton().getOptionsParam().getConnectionParam(),
                         true,
                         HttpSender.MANUAL_REQUEST_INITIATOR);
+        this.extension = extension;
     }
 
     public void replayScenario() {
+        this.extension.getProxyRecordsListener().stopRecord();
         /*
          * On recupere les differents types d attaques selectionner par l utilisateur
          * Tant que le scanner ne dit pas de passer au scanner suivant, on rejoue l authentification et le scenario avec la nouvelle attaque
@@ -79,6 +84,7 @@ public class Scenario {
 
         // TODO remplacer par liste des scanners
         for (int i = 0; i < 1; i++) {
+            SeleniumUsage usage = new SeleniumUsage(this.getAuthentification());
             for (String p : params) {
                 boolean newtScanner = false;
                 boolean stop = false;
@@ -87,10 +93,66 @@ public class Scenario {
                         new PersistentXSSAttack(authentification, id_session, httpSender);
                 PersistentXSS.scan(historyReference, p);
                 */
-                // BrowserMobProxy server = new BrowserMobProxyServer();
 
                 Scanner oracle = new PersistentXSSAttack(authentification, id_session, httpSender);
-                oracle.scan(historyReference, p);
+                // oracle.scan(historyReference, p);
+                WebDriver webDriver = usage.get();
+                /*
+                webDriver.get(
+                        "http://sapdcy2.in.ac-rennes.fr/portailgest/portal/accueil?sso=O&employeeMail=julien.alexandre@ac-rennes.fr");
+                try {
+                    webDriver.wait(10000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                */
+
+                int _acc = 0;
+                while (_acc < 10) {
+                    usage.authentification();
+                    _acc++;
+                }
+                // usage._executeJS();
+                // usage.executeJS("hello");
+                // usage.executeJS("Toto :)");
+                /*
+                                BrowserMobProxy proxy = new BrowserMobProxyServer();
+                                proxy.setTrustAllServers(true);
+                                proxy.start();
+                                proxy.addRequestFilter(
+                                        new RequestFilter() {
+                                            @Override
+                                            public HttpResponse filterRequest(
+                                                    HttpRequest request,
+                                                    HttpMessageContents contents,
+                                                    HttpMessageInfo messageInfo) {
+                                                logger.info("METHOD IS : " + request.getMethod());
+                                                logger.info(
+                                                        "SETTING METHOD : "
+                                                                + request.setMethod(new HttpMethod("POST")));
+                                                return null;
+                                            }
+                                        });
+                                Proxy seleniumProxy = ClientUtil.createSeleniumProxy(proxy);
+
+                                try {
+                                    String hostIp = Inet4Address.getLocalHost().getHostAddress();
+                                    seleniumProxy.setHttpProxy(hostIp + ":" + proxy.getPort());
+                                    seleniumProxy.setSslProxy(hostIp + ":" + proxy.getPort());
+                                } catch (UnknownHostException e) {
+                                    e.printStackTrace();
+                                    logger.info("erreur selenium :" + e.getMessage());
+                                }
+                                DesiredCapabilities capabilities = new DesiredCapabilities();
+                                capabilities.setCapability(CapabilityType.PROXY, seleniumProxy);
+
+                                System.setProperty("webdriver.chrome.driver", "drivers/chromedriver");
+                                ChromeOptions options = new ChromeOptions();
+                                options.merge(capabilities);
+                                WebDriver driver = new ChromeDriver(options);
+                                driver.get("http://www.google.co.in");
+                */
+
                 // BrowserMobProxy proxy = new BrowserMobProxyServer();
                 /*
 

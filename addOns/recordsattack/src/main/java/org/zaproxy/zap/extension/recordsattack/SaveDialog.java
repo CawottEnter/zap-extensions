@@ -244,7 +244,13 @@ public class SaveDialog extends StandardFieldsDialog {
         int authId = Integer.valueOf(this.getStringValue(FIELD_AUTHENTIFICATION).split(":")[0]);
         Authentification auth = this.extension.getAuthentificationById(authId);
         Scenario scenario =
-                new Scenario(nameScenario, nameDescription, paramsSelected, references, auth);
+                new Scenario(
+                        nameScenario,
+                        nameDescription,
+                        paramsSelected,
+                        references,
+                        auth,
+                        this.extension);
         scenario.replayScenario();
     }
 
