@@ -19,30 +19,24 @@
  */
 package org.zaproxy.zap.extension.recordsattack.refound;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.TreeSet;
 import org.apache.log4j.Logger;
-import org.parosproxy.paros.control.Control;
-import org.parosproxy.paros.db.DatabaseException;
-import org.parosproxy.paros.extension.history.ExtensionHistory;
-import org.parosproxy.paros.model.HistoryReference;
-import org.parosproxy.paros.network.HtmlParameter;
-import org.parosproxy.paros.network.HttpMessage;
-import org.parosproxy.paros.network.HttpSender;
-import org.zaproxy.zap.extension.recordsattack.Authentification;
+import org.zaproxy.zap.extension.recordsattack.SeleniumUsage;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.AuthentificationSerializable;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.HistoryReferenceSerializer;
 
 public class Oracle extends Scanner {
     private static final Logger logger = Logger.getLogger(Oracle.class);
     private int size_max_input = 0;
 
-    public Oracle(Authentification authentification, String id_session, HttpSender httpSender) {
-        super(authentification, id_session, httpSender);
+    public Oracle(AuthentificationSerializable authentification, SeleniumUsage seleniumUsage) {
+        super(authentification, seleniumUsage);
         // TODO Auto-generated constructor stub
     }
 
     @Override
-    public void scan(List<HistoryReference> historyReference, String parameters) {
+    public void scan(List<HistoryReferenceSerializer> historyReference, String parameters) {
+        /*
         logger.info("Rentre dans scan Oracle");
         // En premier nous allons chercher la taille maximum accepte par le champ
         boolean size_max_done = false;
@@ -50,7 +44,7 @@ public class Oracle extends Scanner {
         while (!size_max_done) {
             for (int i = 0; i < size_max_input; i++) bufferSize.concat("A");
 
-            TreeSet<HtmlParameter> cookies = authentification();
+            TreeSet<HtmlParameter> cookies = null;
             HttpMessage sourceMsg2 = null;
             for (HistoryReference reference : historyReference) {
                 logger.info("T2");
@@ -75,16 +69,19 @@ public class Oracle extends Scanner {
                         break;
                     }
                     */
-
-                    httpSender.sendAndReceive(sourceMsg2);
-                    ExtensionHistory extHistory =
-                            ((ExtensionHistory)
-                                    Control.getSingleton()
-                                            .getExtensionLoader()
-                                            .getExtension(ExtensionHistory.NAME));
-                    // sourceMsg2.setNote("Test avec :" + payload);
-                    extHistory.addHistory(sourceMsg2, HistoryReference.TYPE_PROXIED);
-                    cookies = sourceMsg2.getCookieParams();
+        /*
+                           httpSender.sendAndReceive(sourceMsg2);
+                           ExtensionHistory extHistory =
+                                   ((ExtensionHistory)
+                                           Control.getSingleton()
+                                                   .getExtensionLoader()
+                                                   .getExtension(ExtensionHistory.NAME));
+                           // sourceMsg2.setNote("Test avec :" + payload);
+                           extHistory.addHistory(sourceMsg2, HistoryReference.TYPE_PROXIED);
+                           cookies = sourceMsg2.getCookieParams();
+                           /*
+        */
+        /*
                 } catch (DatabaseException | IOException e) {
                     // TODO Auto-generated catch block
                     int _acc = 0;
@@ -107,11 +104,7 @@ public class Oracle extends Scanner {
                 }
             }
         }
-    }
 
-    @Override
-    public boolean isFinish() {
-        // TODO Auto-generated method stub
-        return false;
+                     */
     }
 }

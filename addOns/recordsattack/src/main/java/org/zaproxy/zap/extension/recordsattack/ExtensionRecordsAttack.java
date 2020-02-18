@@ -19,25 +19,20 @@
  */
 package org.zaproxy.zap.extension.recordsattack;
 
-import java.awt.Toolkit;
-import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javax.swing.KeyStroke;
 import org.apache.log4j.Logger;
-import org.parosproxy.paros.control.Control;
-import org.parosproxy.paros.control.Control.Mode;
 import org.parosproxy.paros.extension.Extension;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
 import org.parosproxy.paros.extension.history.ProxyListenerLog;
 import org.parosproxy.paros.model.SiteNode;
 import org.parosproxy.paros.view.View;
+import org.zaproxy.zap.extension.recordsattack.scenarioModel.TreeScenarioDialog;
 import org.zaproxy.zap.extension.selenium.ExtensionSelenium;
 import org.zaproxy.zap.model.Context;
 import org.zaproxy.zap.utils.DisplayUtils;
-import org.zaproxy.zap.view.ZapMenuItem;
 
 public class ExtensionRecordsAttack extends ExtensionAdaptor {
 
@@ -45,6 +40,7 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     public static final int PROXY_LISTENER_ORDER = ProxyListenerLog.PROXY_LISTENER_ORDER + 1;
     public static final String NAME = "ExtensionRecordsAttack";
     private ProxyRecordsListener proxyRecordsListener;
+    private ProxySeleniumListener proxySeleniumListener;
     private boolean recordsRunning;
     private static final List<Authentification> authentificationsList =
             new ArrayList<Authentification>();
@@ -59,11 +55,13 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     }
 
     private RecordsPanel recordsPanel = null;
-    private RecordsRequestDialog recordsDialog = null;
-    private ZapMenuItem menuItemCustomScan;
 
     private SaveDialog saveDialog = null;
     private AuthentificationDialog authentificationDialog = null;
+    private TreeScenarioDialog scenarioDialog = null;
+    private List<Scenario> scenarios = null;
+
+    private RecordsAttackAPI recordsAttackAPI;
 
     /**
      * initializes the extension
@@ -79,6 +77,7 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
     @Override
     public void init() {
         super.init();
+        recordsAttackAPI = new RecordsAttackAPI(this);
     }
 
     @Override
@@ -99,36 +98,12 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
 
         if (getView() != null) {
             extensionHook.getHookView().addStatusPanel(getRecordsPanel());
-            extensionHook.getHookMenu().addToolsMenuItem(getMenuItemCustomScan());
+            // extensionHook.getHookMenu().addToolsMenuItem(getMenuItemCustomScan());
+            extensionHook.addApiImplementor(recordsAttackAPI);
+
             extensionHook.addProxyListener(getProxyRecordsListener());
+            extensionHook.addProxyListener(getProxySeleniumListener());
         }
-    }
-
-    @SuppressWarnings("deprecation")
-    private ZapMenuItem getMenuItemCustomScan() {
-        if (menuItemCustomScan == null) {
-            menuItemCustomScan =
-                    new ZapMenuItem(
-                            "recordsattack.menu.tools.label",
-                            KeyStroke.getKeyStroke(
-                                    KeyEvent.VK_X,
-                                    // TODO Use getMenuShortcutKeyMaskEx() (and remove warn
-                                    // suppression) when targeting Java 10+
-                                    Toolkit.getDefaultToolkit().getMenuShortcutKeyMask()
-                                            | KeyEvent.ALT_DOWN_MASK,
-                                    false));
-            menuItemCustomScan.setEnabled(Control.getSingleton().getMode() != Mode.safe);
-
-            menuItemCustomScan.addActionListener(
-                    new java.awt.event.ActionListener() {
-
-                        @Override
-                        public void actionPerformed(java.awt.event.ActionEvent e) {
-                            showScanDialog(null);
-                        }
-                    });
-        }
-        return menuItemCustomScan;
     }
 
     @Override
@@ -149,27 +124,13 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
         return recordsPanel;
     }
 
-    public void showScanDialog(SiteNode node) {
-        if (recordsDialog == null) {
-            recordsDialog =
-                    new RecordsRequestDialog(
-                            this,
-                            View.getSingleton().getMainFrame(),
-                            DisplayUtils.getScaledDimension(700, 500));
-            recordsDialog.init();
-        }
-        recordsDialog.setVisible(true);
-    }
-
     public void showSaveDialog(SiteNode node) {
         if (saveDialog == null) {
-            logger.error("SHOW DIALOG");
             saveDialog =
                     new SaveDialog(
                             this,
                             View.getSingleton().getMainFrame(),
                             DisplayUtils.getScaledDimension(700, 500));
-            logger.error("INIT");
             saveDialog.init();
         }
 
@@ -184,17 +145,28 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
                             this,
                             View.getSingleton().getMainFrame(),
                             DisplayUtils.getScaledDimension(700, 500));
+            authentificationDialog.init();
         }
-        authentificationDialog.init();
         authentificationDialog.setVisible(true);
+    }
+
+    public void showScenarioDialog(SiteNode node) {
+        logger.info("Show scenarios windows");
+        if (scenarioDialog == null) {
+            scenarioDialog =
+                    new TreeScenarioDialog(
+                            this,
+                            View.getSingleton().getMainFrame(),
+                            DisplayUtils.getScaledDimension(700, 500));
+        }
+        logger.info("Init of scenario Dialog");
+        logger.info("_debug scenario in extension is null ? " + (getScenarios() == null));
+        scenarioDialog.initialize();
+        scenarioDialog.setVisible(true);
     }
 
     public AuthentificationDialog getAuthentificationDialog() {
         return authentificationDialog;
-    }
-
-    public boolean isRecordRunning() {
-        return recordsRunning;
     }
 
     public ProxyRecordsListener getProxyRecordsListener() {
@@ -202,10 +174,6 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
             proxyRecordsListener = new ProxyRecordsListener(this);
         }
         return proxyRecordsListener;
-    }
-
-    public void setProxyRecordsListener(ProxyRecordsListener proxyRecordsListener) {
-        this.proxyRecordsListener = proxyRecordsListener;
     }
 
     /*
@@ -232,5 +200,20 @@ public class ExtensionRecordsAttack extends ExtensionAdaptor {
 
     public void setContext(Context context) {
         this.context = context;
+    }
+
+    public ProxySeleniumListener getProxySeleniumListener() {
+        if (proxySeleniumListener == null) proxySeleniumListener = new ProxySeleniumListener(this);
+
+        return proxySeleniumListener;
+    }
+
+    public void saveScenario(Scenario scenario) {
+        getScenarios().add(scenario);
+    }
+
+    public List<Scenario> getScenarios() {
+        if (scenarios == null) scenarios = new ArrayList<Scenario>();
+        return scenarios;
     }
 }

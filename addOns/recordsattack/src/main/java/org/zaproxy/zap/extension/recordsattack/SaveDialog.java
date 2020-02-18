@@ -24,7 +24,6 @@ import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +43,7 @@ import org.parosproxy.paros.network.HtmlParameter;
 import org.parosproxy.paros.network.HttpMalformedHeaderException;
 import org.parosproxy.paros.view.MainFrame;
 import org.zaproxy.zap.extension.recordsattack.RecordsAttackResultsTableModel.AjaxSpiderTableEntry;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.HistoryReferenceSerializer;
 import org.zaproxy.zap.extension.users.ExtensionUserManagement;
 import org.zaproxy.zap.view.StandardFieldsDialog;
 
@@ -170,9 +170,6 @@ public class SaveDialog extends StandardFieldsDialog {
                     modelUrls.addRow(data2);
                 });
 
-        // super.tabOffsets.get(1);
-        // this.addField(this.tabPanels.get(1), this.tabOffsets.get(1), "toito",
-        // splitting,splitting,0.0D);
         this.addPadding(0);
 
         this.addTextField(0, FIELD_NAME, "Description");
@@ -217,21 +214,12 @@ public class SaveDialog extends StandardFieldsDialog {
         for (int count = 0; count < modelParametersSelected.getRowCount(); count++) {
             paramsSelected.add((String) modelParametersSelected.getValueAt(count, 0));
         }
-        logger.info("Parametres selectionner :");
-        paramsSelected.forEach(
-                s -> {
-                    logger.info(s);
-                });
         String nameScenario = this.getStringValue(FIELD_NAME);
         String nameDescription = this.getStringValue(FIELD_DESCRIPTION);
         /*
          * We get all informations about this scenario
          */
-        logger.info("Name Scenario = " + nameScenario);
-        logger.info("Description : " + nameDescription);
-        // DefaultMutableTreeNode top = new DefaultMutableTreeNode("The Java Series");
 
-        // org.parosproxy.paros.model.Model.getSingleton().getSession().getSiteTree().setRoot(top);
         List<HistoryReference> references = new ArrayList<HistoryReference>();
         this.extension
                 .getRecordsPanel()
@@ -243,21 +231,24 @@ public class SaveDialog extends StandardFieldsDialog {
                         });
         int authId = Integer.valueOf(this.getStringValue(FIELD_AUTHENTIFICATION).split(":")[0]);
         Authentification auth = this.extension.getAuthentificationById(authId);
+        List<HistoryReferenceSerializer> historyReferenceSerializers =
+                HistoryReferenceSerializer.convert(references);
         Scenario scenario =
                 new Scenario(
                         nameScenario,
                         nameDescription,
                         paramsSelected,
-                        references,
+                        historyReferenceSerializers,
                         auth,
                         this.extension);
-        scenario.replayScenario();
+
+        this.extension.saveScenario(scenario);
+        // Clear table of request
+        this.extension.getRecordsPanel().clearHistoryUrl();
     }
 
     @Override
     public String validateFields() {
-        logger.info("ValidateFields call :)");
-
         return null;
     }
 
@@ -413,13 +404,5 @@ class WrapperParameter {
     public String getMethod() {
 
         return method;
-    }
-
-    static class ParametersSortingByUsedComparator implements Comparator<WrapperParameter> {
-
-        @Override
-        public int compare(WrapperParameter parameter1, WrapperParameter parameter2) {
-            return parameter1.getUsed() - parameter2.getUsed();
-        }
     }
 }

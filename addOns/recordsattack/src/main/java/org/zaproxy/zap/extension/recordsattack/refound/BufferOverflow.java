@@ -23,18 +23,15 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.core.scanner.Alert;
-import org.parosproxy.paros.core.scanner.Category;
-import org.parosproxy.paros.model.HistoryReference;
 import org.parosproxy.paros.network.HttpMessage;
-import org.parosproxy.paros.network.HttpSender;
-import org.zaproxy.zap.extension.recordsattack.Authentification;
-import org.zaproxy.zap.model.Tech;
-import org.zaproxy.zap.model.TechSet;
+import org.zaproxy.zap.extension.recordsattack.SeleniumUsage;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.AuthentificationSerializable;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.HistoryReferenceSerializer;
 
 public class BufferOverflow extends Scanner {
 
-    BufferOverflow(Authentification authentification, String id_session, HttpSender httpSender) {
-        super(authentification, id_session, httpSender);
+    BufferOverflow(AuthentificationSerializable authentification, SeleniumUsage seleniumUsage) {
+        super(authentification, seleniumUsage);
         // TODO Auto-generated constructor stub
     }
 
@@ -43,40 +40,6 @@ public class BufferOverflow extends Scanner {
 
     private static final int PLUGIN_ID = 30001;
     private static Logger log = Logger.getLogger(BufferOverflow.class);
-
-    @Override
-    public int getId() {
-        return PLUGIN_ID;
-    }
-
-    @Override
-    public String getName() {
-        return Constant.messages.getString(MESSAGE_PREFIX + "name");
-    }
-
-    public boolean targets(TechSet technologies) {
-        return technologies.includes(Tech.C);
-    }
-
-    @Override
-    public String getDescription() {
-        return Constant.messages.getString(MESSAGE_PREFIX + "desc");
-    }
-
-    @Override
-    public int getCategory() {
-        return Category.INJECTION;
-    }
-
-    @Override
-    public String getSolution() {
-        return Constant.messages.getString(MESSAGE_PREFIX + "soln");
-    }
-
-    @Override
-    public String getReference() {
-        return Constant.messages.getString(MESSAGE_PREFIX + "refs");
-    }
 
     public String getOther() {
         return Constant.messages.getString(MESSAGE_PREFIX + "other");
@@ -192,14 +155,8 @@ public class BufferOverflow extends Scanner {
     }
 
     @Override
-    public void scan(List<HistoryReference> historyReference, String parameters) {
+    public void scan(List<HistoryReferenceSerializer> historyReference, String parameters) {
         // TODO Auto-generated method stub
 
-    }
-
-    @Override
-    public boolean isFinish() {
-        // TODO Auto-generated method stub
-        return false;
     }
 }

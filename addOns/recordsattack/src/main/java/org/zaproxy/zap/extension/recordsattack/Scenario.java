@@ -19,58 +19,44 @@
  */
 package org.zaproxy.zap.extension.recordsattack;
 
-import java.net.HttpCookie;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import org.apache.commons.httpclient.URI;
 import org.apache.log4j.Logger;
-import org.openqa.selenium.WebDriver;
-import org.parosproxy.paros.control.Control;
-import org.parosproxy.paros.extension.history.ExtensionHistory;
-import org.parosproxy.paros.model.HistoryReference;
-import org.parosproxy.paros.model.Model;
-import org.parosproxy.paros.network.HtmlParameter;
-import org.parosproxy.paros.network.HttpMessage;
-import org.parosproxy.paros.network.HttpRequestHeader;
-import org.parosproxy.paros.network.HttpSender;
-import org.zaproxy.zap.extension.httpsessions.HttpSession;
-import org.zaproxy.zap.extension.httpsessions.HttpSessionTokensSet;
 import org.zaproxy.zap.extension.recordsattack.refound.PersistentXSSAttack;
 import org.zaproxy.zap.extension.recordsattack.refound.Scanner;
-import org.zaproxy.zap.network.HttpRequestBody;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.AuthentificationSerializable;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.HistoryReferenceSerializer;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.ScenarioSerializable;
 
 public class Scenario {
+    private ScenarioSerializable scenarioSerializable;
     private static final Logger logger = Logger.getLogger(Scenario.class);
-    private String name;
-    private String comments;
-    private Authentification authentification;
-    private List<String> params;
-    private List<HistoryReference> historyReference;
-    private HttpSender httpSender;
-    private String id_session;
     private ExtensionRecordsAttack extension;
 
     Scenario(
             String name,
             String comments,
             List<String> paramsSelected,
-            List<HistoryReference> references,
+            List<HistoryReferenceSerializer> references,
             Authentification authentification,
             ExtensionRecordsAttack extension) {
-        this.name = name;
-        this.comments = comments;
-        this.params = paramsSelected;
-        this.historyReference = references;
-        this.authentification = authentification;
-        this.httpSender =
-                new HttpSender(
-                        Model.getSingleton().getOptionsParam().getConnectionParam(),
-                        true,
-                        HttpSender.MANUAL_REQUEST_INITIATOR);
+
+        AuthentificationSerializable authentificationSerializable =
+                new AuthentificationSerializable(
+                        authentification.getName(),
+                        authentification.getDescription(),
+                        authentification.getId(),
+                        authentification.getReferences());
+
         this.extension = extension;
+
+        scenarioSerializable =
+                new ScenarioSerializable(
+                        name, comments, paramsSelected, authentificationSerializable, references);
+    }
+
+    public Scenario(ScenarioSerializable scenarioSerializable, ExtensionRecordsAttack extension) {
+        this.extension = extension;
+        this.scenarioSerializable = scenarioSerializable;
     }
 
     public void replayScenario() {
@@ -80,23 +66,32 @@ public class Scenario {
          * Tant que le scanner ne dit pas de passer au scanner suivant, on rejoue l authentification et le scenario avec la nouvelle attaque
          *
          */
-        // TODO
-
         // TODO remplacer par liste des scanners
         for (int i = 0; i < 1; i++) {
-            SeleniumUsage usage = new SeleniumUsage(this.getAuthentification());
-            for (String p : params) {
+            SeleniumUsage usage =
+                    new SeleniumUsage(
+                            this.getScenarioSerializable().getAuthentificationSerializable(),
+                            this.extension);
+            usage.get();
+
+            // usage.authentification();
+            for (String p : getParams()) {
                 boolean newtScanner = false;
                 boolean stop = false;
-                /*
-                Scanner PersistentXSS =
-                        new PersistentXSSAttack(authentification, id_session, httpSender);
-                PersistentXSS.scan(historyReference, p);
-                */
 
-                Scanner oracle = new PersistentXSSAttack(authentification, id_session, httpSender);
+                Scanner PersistentXSS =
+                        new PersistentXSSAttack(
+                                this.getScenarioSerializable().getAuthentificationSerializable(),
+                                usage);
+                PersistentXSS.scan(this.getScenarioSerializable().getHistoryReference(), p);
+
                 // oracle.scan(historyReference, p);
-                WebDriver webDriver = usage.get();
+                // WebDriver webDriver = usage.get();
+
+                // Scanner oracle = new PersistentXSSAttack(authentification, httpSender, usage);
+                // oracle.scan(historyReference, p);
+                //  logger.info("FINIIIIIIIIII");
+
                 /*
                 webDriver.get(
                         "http://sapdcy2.in.ac-rennes.fr/portailgest/portal/accueil?sso=O&employeeMail=julien.alexandre@ac-rennes.fr");
@@ -106,10 +101,11 @@ public class Scenario {
                     e.printStackTrace();
                 }
                 */
-
+                /*
                 int _acc = 0;
                 while (_acc < 10) {
                     usage.authentification();
+                    usage._executeJS();
                     _acc++;
                 }
                 // usage._executeJS();
@@ -177,7 +173,7 @@ public class Scenario {
             }
         }
     }
-
+    /*
     private TreeSet<HtmlParameter> authentification() {
         // TODO supprimer les debugs
         HttpSessionTokensSet tokenSet = new HttpSessionTokensSet();
@@ -224,18 +220,44 @@ public class Scenario {
         }
         return lastCookies;
     }
-
+    /*
     public void sendRequest(HttpMessage message, String param, String payload) {
 
         Injection injection = new Injection();
         //  injection.scan(message, param, payload);
     }
+    */
 
-    public Authentification getAuthentification() {
-        return authentification;
+    public AuthentificationSerializable getAuthentification() {
+        return this.getScenarioSerializable().getAuthentificationSerializable();
     }
 
-    public void setAuthentification(Authentification authentification) {
-        this.authentification = authentification;
+    public void setAuthentification(AuthentificationSerializable authentification) {
+        this.getScenarioSerializable().setAuthentificationSerializable(authentification);
+    }
+
+    public String getName() {
+        return this.scenarioSerializable.getName();
+    }
+
+    /*
+        public void setIdScenario(int idScenario) {
+            this.idScenario = idScenario;
+        }
+
+        public int getIdScenario() {
+            return idScenario;
+        }
+    */
+    public String getComments() {
+        return this.scenarioSerializable.getComments();
+    }
+
+    public List<String> getParams() {
+        return this.scenarioSerializable.getParams();
+    }
+
+    public ScenarioSerializable getScenarioSerializable() {
+        return scenarioSerializable;
     }
 }

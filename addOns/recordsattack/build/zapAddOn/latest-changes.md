@@ -1,0 +1,1 @@
+- Enable websockets ([Issue 4521](https://github.com/zaproxy/zaproxy/issues/4521))

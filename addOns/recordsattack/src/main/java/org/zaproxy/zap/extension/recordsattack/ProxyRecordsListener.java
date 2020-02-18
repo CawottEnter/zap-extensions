@@ -69,6 +69,7 @@ public class ProxyRecordsListener implements ProxyListener {
                 e.printStackTrace();
             }
         }
+
         return true;
     }
 

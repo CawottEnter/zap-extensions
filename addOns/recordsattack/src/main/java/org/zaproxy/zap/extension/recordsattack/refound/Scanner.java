@@ -20,87 +20,33 @@
 package org.zaproxy.zap.extension.recordsattack.refound;
 
 import java.io.UnsupportedEncodingException;
-import java.net.HttpCookie;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.Vector;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.httpclient.URI;
 import org.apache.commons.httpclient.URIException;
 import org.apache.log4j.Logger;
-import org.parosproxy.paros.control.Control;
-import org.parosproxy.paros.core.scanner.HostProcess;
-import org.parosproxy.paros.extension.history.ExtensionHistory;
-import org.parosproxy.paros.model.HistoryReference;
 import org.parosproxy.paros.model.Model;
 import org.parosproxy.paros.network.HtmlParameter;
 import org.parosproxy.paros.network.HttpMessage;
-import org.parosproxy.paros.network.HttpRequestHeader;
-import org.parosproxy.paros.network.HttpSender;
-import org.zaproxy.zap.extension.httpsessions.HttpSession;
-import org.zaproxy.zap.extension.httpsessions.HttpSessionTokensSet;
-import org.zaproxy.zap.extension.recordsattack.Authentification;
-import org.zaproxy.zap.network.HttpRequestBody;
+import org.zaproxy.zap.extension.recordsattack.SeleniumUsage;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.AuthentificationSerializable;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.HistoryReferenceSerializer;
 
 public abstract class Scanner {
     private static final Logger logger = Logger.getLogger(Scanner.class);
 
-    protected HttpSender httpSender;
-    private Authentification authentification;
-    private String id_session;
+    private AuthentificationSerializable authentification;
+    public SeleniumUsage seleniumUsage;
 
-    private String[] kkeyValue;
-
-    Scanner(Authentification authentification, String id_session, HttpSender httpSender) {
+    Scanner(AuthentificationSerializable authentification, SeleniumUsage usage) {
         this.authentification = authentification;
-        this.id_session = id_session;
-        this.httpSender = httpSender;
-    }
-
-    public int getId() {
-        // TODO Auto-generated method stub
-        return 0;
-    }
-
-    public String getName() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    public String getDescription() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    public void scan() {
-        // TODO Auto-generated method stub
-
-    }
-
-    public int getCategory() {
-        // TODO Auto-generated method stub
-        return 0;
-    }
-
-    public String getSolution() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    public String getReference() {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    public void notifyPluginCompleted(HostProcess parent) {
-        // TODO Auto-generated method stub
-
+        this.seleniumUsage = usage;
     }
 
     /**
@@ -109,11 +55,10 @@ public abstract class Scanner {
      * Response body a getBaseMsg() call should be done. the param name and the value are the
      * original value retrieved by the crawler and the current applied Variant.
      *
-     * @param msg a copy of the HTTP message currently under scanning
-     * @param param the name of the parameter under testing
-     * @param value the clean value (no escaping is needed)
+     * @param historyReference a copy of the HTTP message currently under scanning
+     * @param parameters the name of the parameter under testing
      */
-    public abstract void scan(List<HistoryReference> historyReference, String parameters);
+    public abstract void scan(List<HistoryReferenceSerializer> historyReference, String parameters);
 
     public void setParameter(HttpMessage message, String param, String value) {
         if (getParamNames(message).contains(param)) {
@@ -122,52 +67,6 @@ public abstract class Scanner {
             searchParamInUrlAndModify(message, param, value);
             searchParamInBodyAndModify(message, param, value);
         }
-    }
-
-    protected TreeSet<HtmlParameter> authentification() {
-        // TODO supprimer les debugs
-        HttpSessionTokensSet tokenSet = new HttpSessionTokensSet();
-        HttpSession session = new HttpSession("testSession", tokenSet);
-
-        TreeSet<HtmlParameter> lastCookies = null;
-        final String d_sessionID = "jsessionid";
-        for (HistoryReference reference : this.getAuthentification().getReferences()) {
-            HttpMessage message;
-
-            try {
-                message = reference.getHttpMessage();
-
-                message.setHttpSession(session);
-                List<HttpCookie> nullCookies = new ArrayList<HttpCookie>();
-
-                if (lastCookies == null) message.setCookies(nullCookies);
-                else message.setCookieParams(lastCookies);
-                Pattern p = Pattern.compile("jsessionid=.*\\?");
-                Matcher matcher = p.matcher(message.getRequestHeader().getURI().getURI());
-                if (matcher.find()) {
-                    @SuppressWarnings("deprecation")
-                    URI newUrl =
-                            new URI(matcher.replaceFirst(d_sessionID + "=" + id_session + "?"));
-                    HttpRequestHeader reqHeader = message.getRequestHeader();
-                    HttpRequestBody reqBody = message.getRequestBody();
-                    reqHeader.setURI(newUrl);
-
-                    message = new HttpMessage(reqHeader, reqBody);
-                }
-                httpSender.sendAndReceive(message, true);
-                lastCookies = message.getCookieParams();
-                ExtensionHistory extHistory =
-                        ((ExtensionHistory)
-                                Control.getSingleton()
-                                        .getExtensionLoader()
-                                        .getExtension(ExtensionHistory.NAME));
-                extHistory.addHistory(message, HistoryReference.TYPE_PROXIED);
-            } catch (Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-        return lastCookies;
     }
 
     /*
@@ -361,15 +260,5 @@ public abstract class Scanner {
         }
 
         return "";
-    }
-
-    public abstract boolean isFinish();
-
-    public Authentification getAuthentification() {
-        return authentification;
-    }
-
-    public void setAuthentification(Authentification authentification) {
-        this.authentification = authentification;
     }
 }

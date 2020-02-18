@@ -19,28 +19,21 @@
  */
 package org.zaproxy.zap.extension.recordsattack.refound;
 
-import com.crawljax.core.CrawljaxRunner;
-import java.io.IOException;
 import java.util.List;
-import java.util.TreeSet;
 import org.apache.log4j.Logger;
-import org.parosproxy.paros.control.Control;
-import org.parosproxy.paros.db.DatabaseException;
-import org.parosproxy.paros.extension.history.ExtensionHistory;
-import org.parosproxy.paros.model.HistoryReference;
-import org.parosproxy.paros.network.HtmlParameter;
 import org.parosproxy.paros.network.HttpMessage;
-import org.parosproxy.paros.network.HttpSender;
-import org.zaproxy.zap.extension.recordsattack.Authentification;
-import org.zaproxy.zap.extension.selenium.ExtensionSelenium;
+import org.zaproxy.zap.extension.recordsattack.SeleniumUsage;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.AuthentificationSerializable;
+import org.zaproxy.zap.extension.recordsattack.serializableHelper.HistoryReferenceSerializer;
 import org.zaproxy.zap.model.Vulnerabilities;
 import org.zaproxy.zap.model.Vulnerability;
 
 public class PersistentXSSAttack extends Scanner {
 
     public PersistentXSSAttack(
-            Authentification authentification, String id_session, HttpSender httpSender) {
-        super(authentification, id_session, httpSender);
+            AuthentificationSerializable authentification, SeleniumUsage seleniumUsage) {
+
+        super(authentification, seleniumUsage);
         // TODO Auto-generated constructor stub
     }
 
@@ -48,23 +41,20 @@ public class PersistentXSSAttack extends Scanner {
     private static final String MESSAGE_PREFIX = "ascanrules.testpersistentxssattack.";
 
     private static final String[] GENERIC_SCRIPT_ALERT = {
-        "<script>alert(1);</script>", "\"><inpu/onmouseover=alert(", "plouf"
+        /*
+        "test :)", "<script>alert(1);</script>", "\"><inpu/onmouseover=alert(", "plouf"
+
+             */
+        "hello", "tootttt", "test3",
     };
     private static Vulnerability vuln = Vulnerabilities.getVulnerability("wasc_8");
     private static Logger logger = Logger.getLogger(PersistentXSSAttack.class);
 
+    /*
+    """
+
     public void scan(List<HistoryReference> historyReference, String parameter) {
         boolean vulnerable = false;
-        CrawljaxRunner crawljax;
-        ExtensionSelenium extSelenium =
-                Control.getSingleton().getExtensionLoader().getExtension(ExtensionSelenium.class);
-        // CrawljaxConfigurationBuilder builder =
-        //          CrawljaxConfiguration.builderFor(
-        //
-        // "https://sapdcy2.in.ac-rennes.fr/portailgest/portal/accueil?sso=O&employeeMail=julien.alexandre@ac-rennes.fr");
-        // crawljax.call();
-
-        // new BrowserMobProxyServer();
         int finish = 0;
         while (!vulnerable && finish < GENERIC_SCRIPT_ALERT.length) {
             String payload = GENERIC_SCRIPT_ALERT[finish];
@@ -104,9 +94,37 @@ public class PersistentXSSAttack extends Scanner {
         logger.info("Fin de PersistentXSSAttack");
     }
 
-    @Override
-    public boolean isFinish() {
-        // TODO Auto-generated method stub
-        return false;
+    """*/
+
+    public void scan(List<HistoryReferenceSerializer> historyReference, String parameter) {
+
+        logger.info("RENTRER DANS SCAN PERSISTENTXSS");
+        logger.info("generic size is" + GENERIC_SCRIPT_ALERT.length);
+        seleniumUsage.addObserver();
+
+        for (int finish = 0; finish < GENERIC_SCRIPT_ALERT.length - 1; finish++) {
+            logger.info("finisj is " + finish);
+
+            seleniumUsage.authentification();
+            int _acc = 0;
+            for (HistoryReferenceSerializer reference : historyReference) {
+                HttpMessage message = null;
+
+                _acc++;
+                message = reference.getMessage().toHttpMessage();
+                String payload = GENERIC_SCRIPT_ALERT[finish];
+                HttpMessage sourceMsg2 = message.cloneRequest();
+                setParameter(sourceMsg2, parameter, payload);
+                logger.info("ONPUT DANS SCAN PERSISTENTXSS");
+                logger.info("Il reste  " + (historyReference.size() - _acc));
+                try {
+                    Thread.sleep(4000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                this.seleniumUsage._executeJS(sourceMsg2);
+            }
+            //  seleniumUsage.resetSelenium();
+        }
     }
 }

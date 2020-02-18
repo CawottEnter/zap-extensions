@@ -66,5 +66,9 @@ dependencies {
         // Provided by ZAP.
         exclude(group = "log4j", module = "log4j")
     }
+    implementation("com.fasterxml.jackson.core:jackson-core:2.9.6")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.9.6")
+    implementation("org.apache.commons:commons-lang3:3.5")
+    implementation("com.fasterxml.jackson.core:jackson-annotations:2.9.6")
     implementation("xmlunit:xmlunit:1.5")
 }

@@ -54,7 +54,6 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
     private JButton optionsButton = null;
 
     private JButton startRecordsButton;
-    private JButton stopRecordsButton;
     private JButton saveButton;
     private JButton startRecordAuthentification;
     private JLabel foundLabel = new JLabel();
@@ -66,6 +65,8 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
             new RecordsAttackResultsTableModel();
 
     private int foundCount = 0;
+
+    private JButton scenarioDialogButton;
 
     // private RecordsAttackResultsTableModel spiderResultsTableModel =
     // new RecordsAttackResultsTableModel();
@@ -203,13 +204,34 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
             JLabel t1 = new JLabel();
 
             panelToolbar.add(getStartRecordsButton(), gridBagConstraints1);
-            panelToolbar.add(getStopRecordsButton(), gridBagConstraints2);
+            panelToolbar.add(getScenarioDialogButton(), gridBagConstraints2);
+            // panelToolbar.add(getScenarioDialogButton(), gridBagConstraints3);
+
+            // panelToolbar.add(getScenarioDialogButton(), gridBagConstraints4);
+
             panelToolbar.add(getSaveButton(), gridBagConstraints5);
             panelToolbar.add(getstartRecordAuthentification(), gridBagConstraints6);
 
             panelToolbar.add(t1, gridBagConstraintsX);
         }
         return panelToolbar;
+    }
+
+    private JButton getScenarioDialogButton() {
+        if (scenarioDialogButton == null) {
+            scenarioDialogButton = new JButton();
+            scenarioDialogButton.setText("Scenario");
+            scenarioDialogButton.setEnabled(true);
+            scenarioDialogButton.addActionListener(
+                    new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            extension.showScenarioDialog(null);
+                            logger.info("WARZAZAT");
+                        }
+                    });
+        }
+        return scenarioDialogButton;
     }
 
     private JButton getSaveButton() {
@@ -241,35 +263,27 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
             startRecordsButton.setIcon(
                     new ImageIcon(RecordsPanel.class.getResource("/resource/icon/10/093.png")));
             startRecordsButton.setEnabled(!Mode.safe.equals(Control.getSingleton().getMode()));
-            startRecordsButton.addActionListener(
-                    new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent e) {
-                            extension.showScanDialog(null);
-                        }
-                    });
+            startRecordsButton.addActionListener(startRecordsAction(this.extension));
         }
         return startRecordsButton;
     }
 
-    /** @return The Stop Scan Button */
-    private JButton getStopRecordsButton() {
-        if (stopRecordsButton == null) {
-            stopRecordsButton = new JButton();
-            stopRecordsButton.setToolTipText(
-                    this.extension.getMessages().getString("recordsattack.toolbar.button.stop"));
-            stopRecordsButton.setIcon(
-                    new ImageIcon(RecordsPanel.class.getResource("/resource/icon/16/142.png")));
-            stopRecordsButton.setEnabled(false);
-            stopRecordsButton.addActionListener(
-                    new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent e) {
-                            stopRecord();
-                        }
-                    });
-        }
-        return stopRecordsButton;
+    private ActionListener startRecordsAction(ExtensionRecordsAttack extension) {
+        return new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                extension.startRecord();
+            }
+        };
+    }
+
+    private ActionListener stopRecordsAction(ExtensionRecordsAttack extension) {
+        return new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                stopRecord();
+            }
+        };
     }
 
     private JButton getstartRecordAuthentification() {
@@ -294,16 +308,33 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
 
     public void stopRecord() {
         this.getStartRecordsButton().setEnabled(true);
-        this.getStopRecordsButton().setEnabled(false);
+        for (ActionListener action : this.getStartRecordsButton().getActionListeners())
+            this.getStartRecordsButton().removeActionListener(action);
+        this.getStartRecordsButton().addActionListener(startRecordsAction(this.extension));
+        getStartRecordsButton()
+                .setText(
+                        this.extension
+                                .getMessages()
+                                .getString("recordsattack.toolbar.button.start"));
         this.getSaveButton().setEnabled(true);
-        // Stop intercept requests
+        logger.info("_debug ici suppression de la table");
         this.extension.getProxyRecordsListener().stopRecord();
     }
 
     public void startRecord() {
-        this.getStartRecordsButton().setEnabled(false);
-        this.getStopRecordsButton().setEnabled(true);
-        this.getSaveButton().setEnabled(false);
+        /*
+        On modifie le nom du boutton
+         */
+        this.getStartRecordsButton().setEnabled(true);
+        getStartRecordsButton()
+                .setText(
+                        this.extension
+                                .getMessages()
+                                .getString("recordsattack.toolbar.button.stop"));
+        for (ActionListener action : this.getStartRecordsButton().getActionListeners())
+            this.getStartRecordsButton().removeActionListener(action);
+
+        this.getStartRecordsButton().addActionListener(stopRecordsAction(extension));
     }
 
     private ActionListener getRecordAuthentificationActionListener() {
@@ -399,13 +430,16 @@ public class RecordsPanel extends AbstractPanel implements SpiderListener {
     /**
      * @param historyReference history reference
      * @param msg the http message
-     * @param url the targeted url
      */
     private boolean addHistoryUrl(
             HistoryReference historyReference, HttpMessage msg, ResourceState state) {
 
         this.spiderResultsTableModel.addHistoryReference(historyReference, state);
         return true;
+    }
+
+    public void clearHistoryUrl() {
+        this.spiderResultsTableModel.clear();
     }
 
     @Override
