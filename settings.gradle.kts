@@ -66,6 +66,7 @@ var addOns = listOf(
     "savexmlmessage",
     "scripts",
     "selenium",
+        "seleniumrectorat",
     "sequence",
     "simpleexample",
     "soap",

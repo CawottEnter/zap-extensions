@@ -102,17 +102,7 @@ public abstract class Scanner {
 
     @SuppressWarnings("unchecked")
     private void searchParamInBodyAndModify(HttpMessage message, String param, String value) {
-        /*
-                logger.info("avant recuperation du message :" + message.getRequestBody().toString());
-                logger.info("Avant, tete du nouveau truc: ");
-
-                getParamsFromRequest(message, HtmlParameter.Type.form)
-                        .forEach(t -> logger.info(t.getName() + ":" + t.getValue()));
-        */
         ArrayList<HtmlParameter> parameters = parse(message.getRequestBody().toString());
-        /*
-        getParamsFromRequest(message, HtmlParameter.Type.form);
-        */
         ArrayList<HtmlParameter> cloned_set = new ArrayList<HtmlParameter>();
         cloned_set = (ArrayList<HtmlParameter>) parameters.clone();
 
